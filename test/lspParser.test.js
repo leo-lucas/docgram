@@ -57,4 +57,7 @@ test('Stdio client parses real files with visibility and relations', async () =>
   const address = entities.find(e => e.name === 'Address');
   assert.ok(address);
   assert.ok(address.members.some(m => m.name === 'street'));
+  const role = entities.find(e => e.name === 'Role');
+  assert.ok(role);
+  assert.ok(role.members.some(m => m.name === 'Admin'));
 });

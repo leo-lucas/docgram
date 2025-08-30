@@ -115,7 +115,7 @@ export class LspParser implements Parser {
         const parameters = this.parseParams(line);
         const returnType = kind === 'setter' ? undefined : this.parseReturn(line);
         members.push({ name: child.name, kind, visibility, parameters: parameters.length ? parameters : undefined, returnType });
-      } else if (child.kind === SymbolKind.EnumMember) {
+      } else if (child.kind === SymbolKind.EnumMember || child.kind === SymbolKind.Constant) {
         members.push({ name: child.name, kind: 'property', visibility: 'public' });
       }
     }

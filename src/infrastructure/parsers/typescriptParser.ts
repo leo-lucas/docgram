@@ -26,15 +26,18 @@ export class TypeScriptParser implements Parser {
           relations: [],
         };
         c.getProperties().forEach(p => {
-          const typeText = this.formatType(p.getType());
+          const propertyType = p.getType();
+          const typeText = this.formatType(propertyType);
           entity.members.push({
             name: p.getName(),
             kind: 'property',
             visibility: p.getScope() ?? 'public',
             type: typeText,
           });
-          const typeName = p.getType().getSymbol()?.getName();
-          if (typeName) entity.relations.push({ type: 'association', target: typeName });
+          const symbol = propertyType.getAliasSymbol() ?? propertyType.getSymbol();
+          const typeName = symbol?.getName();
+          if (typeName && !typeName.startsWith('__'))
+            entity.relations.push({ type: 'association', target: typeName });
         });
         c.getConstructors().forEach(cons => {
           const parameters: ParameterInfo[] = cons.getParameters().map(prm => ({
@@ -94,15 +97,18 @@ export class TypeScriptParser implements Parser {
           relations: [],
         };
         i.getProperties().forEach(p => {
-          const typeText = this.formatType(p.getType());
+          const propertyType = p.getType();
+          const typeText = this.formatType(propertyType);
           entity.members.push({
             name: p.getName(),
             kind: 'property',
             visibility: 'public',
             type: typeText,
           });
-          const typeName = p.getType().getSymbol()?.getName();
-          if (typeName) entity.relations.push({ type: 'association', target: typeName });
+          const symbol = propertyType.getAliasSymbol() ?? propertyType.getSymbol();
+          const typeName = symbol?.getName();
+          if (typeName && !typeName.startsWith('__'))
+            entity.relations.push({ type: 'association', target: typeName });
         });
         i.getMethods().forEach(m => {
           const parameters: ParameterInfo[] = m.getParameters().map(prm => ({
