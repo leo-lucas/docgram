@@ -43,8 +43,11 @@ test('Stdio client parses real files with visibility and relations', async () =>
   const person = entities.find(e => e.name === 'Person');
   assert.ok(person);
   assert.ok(person.implements?.includes('Greeter'));
-  assert.ok(person.members.some(m => m.name === 'age' && m.visibility === 'protected'));
-  assert.ok(person.members.some(m => m.name === '_name' && m.visibility === 'private'));
+  assert.ok(person.members.some(m => m.name === 'age' && m.visibility === 'protected' && m.type === 'number'));
+  assert.ok(person.members.some(m => m.name === '_name' && m.visibility === 'private' && m.type === 'string'));
+  assert.ok(person.members.some(m => m.kind === 'constructor' && m.parameters?.some(p => p.name === 'address' && p.type === 'Address')));
+  assert.ok(person.members.some(m => m.name === 'greet' && m.returnType === 'void'));
+  assert.ok(person.members.some(m => m.name === 'calculateSalary' && m.returnType === 'number' && m.parameters?.some(p => p.name === 'multiplier' && p.type === 'number')));
   assert.ok(person.relations.some(r => r.type === 'association' && r.target === 'Address'));
   const employee = entities.find(e => e.name === 'Employee');
   assert.ok(employee);

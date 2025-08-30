@@ -2,10 +2,18 @@ import { DocumentSymbol } from 'vscode-languageserver-protocol';
 
 export type Visibility = 'public' | 'protected' | 'private';
 
+export interface ParameterInfo {
+  name: string;
+  type: string;
+}
+
 export interface MemberInfo {
   name: string;
-  kind: 'property' | 'method' | 'getter' | 'setter';
+  kind: 'property' | 'method' | 'getter' | 'setter' | 'constructor';
   visibility: Visibility;
+  type?: string;
+  returnType?: string;
+  parameters?: ParameterInfo[];
 }
 
 export interface RelationInfo {

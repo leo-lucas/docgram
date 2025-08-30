@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Parser, EntityInfo, MemberInfo, LanguageClient } from '../../core/model.js';
+import { Parser, EntityInfo, MemberInfo, LanguageClient, ParameterInfo } from '../../core/model.js';
 import { DocumentSymbol, SymbolKind } from 'vscode-languageserver-protocol';
 
 export class LspParser implements Parser {
@@ -83,8 +83,8 @@ export class LspParser implements Parser {
         const line = this.lineAt(lines, i).trim();
         const m = line.match(/^([A-Za-z0-9_]+)/);
         if (!m) continue;
-        members.push({ name: m[1], kind: 'property', visibility: 'public' });
         const typeMatch = line.match(/:\s*([A-Za-z0-9_\.]+)/);
+        members.push({ name: m[1], kind: 'property', visibility: 'public', type: typeMatch?.[1] });
         if (typeMatch) entity.relations.push({ type: 'association', target: typeMatch[1] });
       }
       entity.members = members;
@@ -102,14 +102,19 @@ export class LspParser implements Parser {
       else if (/\bprotected\b/.test(line)) visibility = 'protected';
 
       if (child.kind === SymbolKind.Field || child.kind === SymbolKind.Property) {
-        members.push({ name: child.name, kind: 'property', visibility });
-        const typeMatch = line.match(/:\s*([A-Za-z0-9_\.]+)/);
-        if (typeMatch) entity.relations.push({ type: 'association', target: typeMatch[1] });
+        const type = this.parsePropertyType(line);
+        members.push({ name: child.name, kind: 'property', visibility, type });
+        if (type) entity.relations.push({ type: 'association', target: type });
+      } else if (child.kind === SymbolKind.Constructor) {
+        const parameters = this.parseParams(line);
+        members.push({ name: 'constructor', kind: 'constructor', visibility, parameters });
       } else if (child.kind === SymbolKind.Method || child.kind === SymbolKind.Function) {
         let kind: MemberInfo['kind'] = 'method';
         if (/^get\s+/.test(line)) kind = 'getter';
         else if (/^set\s+/.test(line)) kind = 'setter';
-        members.push({ name: child.name, kind, visibility });
+        const parameters = this.parseParams(line);
+        const returnType = kind === 'setter' ? undefined : this.parseReturn(line);
+        members.push({ name: child.name, kind, visibility, parameters: parameters.length ? parameters : undefined, returnType });
       } else if (child.kind === SymbolKind.EnumMember) {
         members.push({ name: child.name, kind: 'property', visibility: 'public' });
       }
@@ -119,6 +124,31 @@ export class LspParser implements Parser {
 
   private lineAt(lines: string[], line: number): string {
     return lines[line] ?? '';
+  }
+
+  private parseParams(line: string): ParameterInfo[] {
+    const m = line.match(/\(([^)]*)\)/);
+    if (!m) return [];
+    return m[1]
+      .split(',')
+      .map(p => p.trim())
+      .filter(Boolean)
+      .map(p => {
+        const pm = p.match(/([A-Za-z0-9_]+)\s*:\s*([^,]+)/);
+        if (!pm) return null;
+        return { name: pm[1], type: pm[2].trim() } as ParameterInfo;
+      })
+      .filter((p): p is ParameterInfo => !!p);
+  }
+
+  private parseReturn(line: string): string | undefined {
+    const m = line.match(/\)\s*:\s*([^\{;]+)/);
+    return m ? m[1].trim() : undefined;
+  }
+
+  private parsePropertyType(line: string): string | undefined {
+    const m = line.match(/:\s*([^;]+)/);
+    return m ? m[1].trim() : undefined;
   }
 
   private parseExtends(header: string): string[] {

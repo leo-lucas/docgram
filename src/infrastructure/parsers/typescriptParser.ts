@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Project, SyntaxKind } from 'ts-morph';
-import { EntityInfo, Parser } from '../../core/model.js';
+import { Project, SyntaxKind, Type } from 'ts-morph';
+import { EntityInfo, Parser, ParameterInfo } from '../../core/model.js';
 
 export class TypeScriptParser implements Parser {
   async parse(paths: string[]): Promise<EntityInfo[]> {
@@ -26,19 +26,39 @@ export class TypeScriptParser implements Parser {
           relations: [],
         };
         c.getProperties().forEach(p => {
+          const typeText = this.formatType(p.getType());
           entity.members.push({
             name: p.getName(),
             kind: 'property',
             visibility: p.getScope() ?? 'public',
+            type: typeText,
           });
           const typeName = p.getType().getSymbol()?.getName();
           if (typeName) entity.relations.push({ type: 'association', target: typeName });
         });
+        c.getConstructors().forEach(cons => {
+          const parameters: ParameterInfo[] = cons.getParameters().map(prm => ({
+            name: prm.getName(),
+            type: this.formatType(prm.getType()),
+          }));
+          entity.members.push({
+            name: 'constructor',
+            kind: 'constructor',
+            visibility: cons.getScope() ?? 'public',
+            parameters,
+          });
+        });
         c.getMethods().forEach(m => {
+          const parameters: ParameterInfo[] = m.getParameters().map(prm => ({
+            name: prm.getName(),
+            type: this.formatType(prm.getType()),
+          }));
           entity.members.push({
             name: m.getName(),
             kind: 'method',
             visibility: m.getScope() ?? 'public',
+            returnType: this.formatType(m.getReturnType()),
+            parameters,
           });
         });
         c.getGetAccessors().forEach(g => {
@@ -46,13 +66,19 @@ export class TypeScriptParser implements Parser {
             name: g.getName(),
             kind: 'getter',
             visibility: g.getScope() ?? 'public',
+            returnType: this.formatType(g.getReturnType()),
           });
         });
         c.getSetAccessors().forEach(s => {
+          const parameters: ParameterInfo[] = s.getParameters().map(prm => ({
+            name: prm.getName(),
+            type: this.formatType(prm.getType()),
+          }));
           entity.members.push({
             name: s.getName(),
             kind: 'setter',
             visibility: s.getScope() ?? 'public',
+            parameters,
           });
         });
         entities.push(entity);
@@ -68,19 +94,27 @@ export class TypeScriptParser implements Parser {
           relations: [],
         };
         i.getProperties().forEach(p => {
+          const typeText = this.formatType(p.getType());
           entity.members.push({
             name: p.getName(),
             kind: 'property',
             visibility: 'public',
+            type: typeText,
           });
           const typeName = p.getType().getSymbol()?.getName();
           if (typeName) entity.relations.push({ type: 'association', target: typeName });
         });
         i.getMethods().forEach(m => {
+          const parameters: ParameterInfo[] = m.getParameters().map(prm => ({
+            name: prm.getName(),
+            type: this.formatType(prm.getType()),
+          }));
           entity.members.push({
             name: m.getName(),
             kind: 'method',
             visibility: 'public',
+            returnType: this.formatType(m.getReturnType()),
+            parameters,
           });
         });
         entities.push(entity);
@@ -116,10 +150,13 @@ export class TypeScriptParser implements Parser {
           };
           const props = t.getType().getProperties();
           props.forEach(sym => {
+            const decl = sym.getDeclarations()[0];
+            const typeText = this.formatType(decl.getType());
             entity.members.push({
               name: sym.getName(),
               kind: 'property',
               visibility: 'public',
+              type: typeText,
             });
           });
           entities.push(entity);
@@ -146,5 +183,11 @@ export class TypeScriptParser implements Parser {
     } else if (target.endsWith('.ts')) {
       files.push(target);
     }
+  }
+
+  private formatType(t: Type): string {
+    const symName = t.getSymbol()?.getName();
+    const raw = symName && !symName.startsWith('__') ? symName : t.getText();
+    return raw.replace(/import\([^\)]+\)\./g, '');
   }
 }

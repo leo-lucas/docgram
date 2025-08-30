@@ -30,6 +30,10 @@ export abstract class Person implements Greeter {
     this._name = n;
   }
 
+  calculateSalary(multiplier: number): number {
+    return this.age * multiplier;
+  }
+
   abstract greet(): void;
 }
 

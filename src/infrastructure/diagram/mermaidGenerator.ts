@@ -31,9 +31,18 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
       if (e.isAbstract) lines.push('    <<abstract>>');
       for (const m of e.members) {
         const symbol = visibilitySymbol(m.visibility);
-        const prefix = m.kind === 'getter' ? 'get ' : m.kind === 'setter' ? 'set ' : '';
-        const suffix = m.kind === 'method' || m.kind === 'getter' || m.kind === 'setter' ? '()' : '';
-        lines.push(`    ${symbol}${prefix}${m.name}${suffix}`);
+        if (m.kind === 'constructor') {
+          const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
+          lines.push(`    ${symbol}${e.name}(${params})`);
+        } else if (m.kind === 'property') {
+          const type = m.type ? `: ${m.type}` : '';
+          lines.push(`    ${symbol}${m.name}${type}`);
+        } else {
+          const prefix = m.kind === 'getter' ? 'get ' : m.kind === 'setter' ? 'set ' : '';
+          const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
+          const returnType = m.returnType ? `: ${m.returnType}` : '';
+          lines.push(`    ${symbol}${prefix}${m.name}(${params})${returnType}`);
+        }
       }
       lines.push('  }');
     }
