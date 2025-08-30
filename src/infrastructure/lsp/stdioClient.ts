@@ -19,9 +19,16 @@ export class StdioLanguageClient implements LanguageClient {
     const params: InitializeParams = {
       processId: process.pid,
       rootUri: pathToFileURL(rootUri).toString(),
-      capabilities: {},
+      capabilities: {
+        textDocument: {
+          documentSymbol: {
+            hierarchicalDocumentSymbolSupport: true,
+          },
+        },
+      },
     };
     await this.connection.sendRequest('initialize', params);
+    await this.connection.sendNotification('initialized', {});
   }
 
   async documentSymbols(filePath: string, content: string): Promise<DocumentSymbol[]> {
