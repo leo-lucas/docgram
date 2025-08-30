@@ -12,6 +12,9 @@ npm run diagram -- <caminho-do-arquivo-ou-pasta>
 
 # utilizando o parser LSP
 npm run diagram -- --parser lsp <caminho-do-arquivo-ou-pasta>
+
+# gerar README.md com o diagrama
+npm run docs -- <caminho-do-arquivo-ou-pasta>
 ```
 
 ## Testes

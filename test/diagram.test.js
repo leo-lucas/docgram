@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import path from 'node:path';
+import { rmSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { DiagramService } from '../dist/core/usecases/generateDiagram.js';
 import { TypeScriptParser } from '../dist/infrastructure/parsers/typescriptParser.js';
 import { MermaidDiagramGenerator } from '../dist/infrastructure/diagram/mermaidGenerator.js';
@@ -26,4 +28,16 @@ test('prints object for inline property types', async () => {
   const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
   const diagram = await service.generateFromPaths([worker]);
   assert.ok(diagram.includes('+test: object'));
+});
+
+test('docs command writes README with diagram', () => {
+  const dir = path.join('fixtures');
+  const readme = path.join(dir, 'README.md');
+  rmSync(readme, { force: true });
+  const result = spawnSync('node', ['dist/index.js', 'docs', dir]);
+  assert.equal(result.status, 0);
+  const content = readFileSync(readme, 'utf8');
+  assert.ok(content.includes(`# ${path.basename(dir)}`));
+  assert.ok(content.includes('```mermaid'));
+  rmSync(readme);
 });
