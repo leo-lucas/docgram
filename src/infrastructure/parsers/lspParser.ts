@@ -14,55 +14,112 @@ export class LspParser implements Parser {
 
     for (const file of files) {
       const content = fs.readFileSync(file, 'utf8');
+      const lines = content.split(/\r?\n/);
       const symbols = await this.client.documentSymbols(file, content);
       for (const sym of symbols) {
-        const ent = this.symbolToEntity(sym);
+        const ent = this.symbolToEntity(sym, lines);
         if (ent) entities.push(ent);
       }
     }
 
     await this.client.shutdown();
+
+    const names = new Set(entities.map(e => e.name));
+    for (const e of entities) {
+      if (e.extends) e.extends.forEach(p => e.relations.push({ type: 'inheritance', target: p }));
+      if (e.implements) e.implements.forEach(i => e.relations.push({ type: 'implementation', target: i }));
+      e.relations = e.relations.filter(r => names.has(r.target));
+    }
+
     return entities;
   }
 
-  private symbolToEntity(sym: DocumentSymbol): EntityInfo | null {
+  private symbolToEntity(sym: DocumentSymbol, lines: string[]): EntityInfo | null {
     if (sym.kind === SymbolKind.Class) {
-      return {
+      const header = this.lineAt(lines, sym.range.start.line);
+      const entity: EntityInfo = {
         name: sym.name,
         kind: 'class',
-        members: this.membersFrom(sym),
+        isAbstract: /\babstract\b/.test(header),
+        extends: this.parseExtends(header),
+        implements: this.parseImplements(header),
+        members: [],
         relations: [],
       };
+      entity.members = this.membersFrom(sym, lines, entity);
+      return entity;
     }
     if (sym.kind === SymbolKind.Interface) {
-      return {
+      const header = this.lineAt(lines, sym.range.start.line);
+      const entity: EntityInfo = {
         name: sym.name,
         kind: 'interface',
-        members: this.membersFrom(sym),
+        extends: this.parseExtends(header),
+        members: [],
         relations: [],
       };
+      entity.members = this.membersFrom(sym, lines, entity);
+      return entity;
     }
     if (sym.kind === SymbolKind.Enum) {
-      return {
+      const entity: EntityInfo = {
         name: sym.name,
         kind: 'enum',
-        members: this.membersFrom(sym),
+        members: [],
+        relations: [],
+      };
+      entity.members = this.membersFrom(sym, lines, entity);
+      return entity;
+    }
+    if (sym.kind === SymbolKind.Variable) {
+      return {
+        name: sym.name,
+        kind: 'type',
+        members: [],
         relations: [],
       };
     }
     return null;
   }
 
-  private membersFrom(sym: DocumentSymbol): MemberInfo[] {
+  private membersFrom(sym: DocumentSymbol, lines: string[], entity: EntityInfo): MemberInfo[] {
     const members: MemberInfo[] = [];
     for (const child of sym.children || []) {
+      const line = this.lineAt(lines, child.range.start.line).trim();
+      let visibility: 'public' | 'protected' | 'private' = 'public';
+      if (/\bprivate\b/.test(line)) visibility = 'private';
+      else if (/\bprotected\b/.test(line)) visibility = 'protected';
+
       if (child.kind === SymbolKind.Field || child.kind === SymbolKind.Property) {
-        members.push({ name: child.name, kind: 'property', visibility: 'public' });
+        members.push({ name: child.name, kind: 'property', visibility });
+        const typeMatch = line.match(/:\s*([A-Za-z0-9_\.]+)/);
+        if (typeMatch) entity.relations.push({ type: 'association', target: typeMatch[1] });
       } else if (child.kind === SymbolKind.Method || child.kind === SymbolKind.Function) {
-        members.push({ name: child.name, kind: 'method', visibility: 'public' });
+        let kind: MemberInfo['kind'] = 'method';
+        if (/^get\s+/.test(line)) kind = 'getter';
+        else if (/^set\s+/.test(line)) kind = 'setter';
+        members.push({ name: child.name, kind, visibility });
+      } else if (child.kind === SymbolKind.EnumMember) {
+        members.push({ name: child.name, kind: 'property', visibility: 'public' });
       }
     }
     return members;
+  }
+
+  private lineAt(lines: string[], line: number): string {
+    return lines[line] ?? '';
+  }
+
+  private parseExtends(header: string): string[] {
+    const m = header.match(/extends\s+([^\{]+)/);
+    if (m) return m[1].split(',').map(s => s.trim()).filter(Boolean);
+    return [];
+  }
+
+  private parseImplements(header: string): string[] {
+    const m = header.match(/implements\s+([^\{]+)/);
+    if (m) return m[1].split(',').map(s => s.trim()).filter(Boolean);
+    return [];
   }
 
   private collectFiles(target: string, files: string[]) {

@@ -11,9 +11,10 @@ class FakeClient {
     return [{
       name: 'Foo',
       kind: SymbolKind.Class,
+      range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
       children: [
-        { name: 'bar', kind: SymbolKind.Property },
-        { name: 'baz', kind: SymbolKind.Method },
+        { name: 'bar', kind: SymbolKind.Property, range: { start: { line: 1, character: 0 }, end: { line: 1, character: 0 } } },
+        { name: 'baz', kind: SymbolKind.Method, range: { start: { line: 2, character: 0 }, end: { line: 2, character: 0 } } },
       ],
     }];
   }
@@ -35,11 +36,19 @@ test('LSP parser collects files from directories', async () => {
   assert.equal(entities[0].name, 'Foo');
 });
 
-test('Stdio client parses real files with properties', async () => {
+test('Stdio client parses real files with visibility and relations', async () => {
   const client = new StdioLanguageClient(path.join('node_modules', '.bin', 'typescript-language-server'), ['--stdio']);
   const parser = new LspParser(client);
   const entities = await parser.parse(['fixtures/sample.ts']);
   const person = entities.find(e => e.name === 'Person');
   assert.ok(person);
-  assert.ok(person.members.some(m => m.name === '_name'));
+  assert.ok(person.implements?.includes('Greeter'));
+  assert.ok(person.members.some(m => m.name === 'age' && m.visibility === 'protected'));
+  assert.ok(person.members.some(m => m.name === '_name' && m.visibility === 'private'));
+  assert.ok(person.relations.some(r => r.type === 'association' && r.target === 'Address'));
+  const employee = entities.find(e => e.name === 'Employee');
+  assert.ok(employee);
+  assert.ok(employee.extends?.includes('Person'));
+  assert.ok(employee.relations.some(r => r.type === 'inheritance' && r.target === 'Person'));
+  assert.ok(employee.relations.some(r => r.type === 'association' && r.target === 'Role'));
 });
