@@ -13,11 +13,12 @@ export class LspParser implements Parser {
     for (const p of paths) this.collectFiles(p, files);
 
     for (const file of files) {
+      const namespace = this.namespaceOf(file);
       const content = fs.readFileSync(file, 'utf8');
       const lines = content.split(/\r?\n/);
       const symbols = await this.client.documentSymbols(file, content);
       for (const sym of symbols) {
-        const ent = this.symbolToEntity(sym, lines);
+        const ent = this.symbolToEntity(sym, lines, namespace);
         if (ent) entities.push(ent);
       }
     }
@@ -34,7 +35,7 @@ export class LspParser implements Parser {
     return entities;
   }
 
-  private symbolToEntity(sym: DocumentSymbol, lines: string[]): EntityInfo | null {
+  private symbolToEntity(sym: DocumentSymbol, lines: string[], namespace: string | undefined): EntityInfo | null {
     if (sym.kind === SymbolKind.Class) {
       const header = this.lineAt(lines, sym.range.start.line);
       const entity: EntityInfo = {
@@ -43,6 +44,7 @@ export class LspParser implements Parser {
         isAbstract: /\babstract\b/.test(header),
         extends: this.parseExtends(header),
         implements: this.parseImplements(header),
+        namespace,
         members: [],
         relations: [],
       };
@@ -55,6 +57,7 @@ export class LspParser implements Parser {
         name: sym.name,
         kind: 'interface',
         extends: this.parseExtends(header),
+        namespace,
         members: [],
         relations: [],
       };
@@ -65,6 +68,7 @@ export class LspParser implements Parser {
       const entity: EntityInfo = {
         name: sym.name,
         kind: 'enum',
+        namespace,
         members: [],
         relations: [],
       };
@@ -75,6 +79,7 @@ export class LspParser implements Parser {
       const entity: EntityInfo = {
         name: sym.name,
         kind: 'type',
+        namespace,
         members: [],
         relations: [],
       };
@@ -176,5 +181,10 @@ export class LspParser implements Parser {
     } else if (target.endsWith('.ts')) {
       files.push(target);
     }
+  }
+
+  private namespaceOf(file: string): string | undefined {
+    const dir = path.relative(process.cwd(), path.dirname(file));
+    return dir ? dir.split(path.sep).join('.') : undefined;
   }
 }
