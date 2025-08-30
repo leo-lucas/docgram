@@ -1,0 +1,26 @@
+{
+  "name": "doc-graphc",
+  "version": "1.0.0",
+  "description": "Generate diagrams from source code",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "diagram": "npm run build && node dist/index.js",
+    "test": "npm run build && node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^14.0.0",
+    "ts-morph": "^26.0.0",
+    "typescript-language-server": "^4.4.0",
+    "vscode-jsonrpc": "^8.2.0",
+    "vscode-languageserver-protocol": "^3.17.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "typescript": "^5.9.2"
+  }
+}
