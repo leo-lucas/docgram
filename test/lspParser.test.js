@@ -20,8 +20,15 @@ class FakeClient {
 
 test('LSP parser builds entities from document symbols', async () => {
   const parser = new LspParser(new FakeClient());
-  const entities = await parser.parse(['dummy.ts']);
+  const entities = await parser.parse(['fixtures/sample.ts']);
   assert.equal(entities.length, 1);
   assert.equal(entities[0].name, 'Foo');
   assert.equal(entities[0].members.length, 2);
+});
+
+test('LSP parser collects files from directories', async () => {
+  const parser = new LspParser(new FakeClient());
+  const entities = await parser.parse(['fixtures']);
+  assert.equal(entities.length, 1);
+  assert.equal(entities[0].name, 'Foo');
 });

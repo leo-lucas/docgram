@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { Parser, EntityInfo, MemberInfo, LanguageClient } from '../../core/model.js';
 import { DocumentSymbol, SymbolKind } from 'vscode-languageserver-protocol';
 
@@ -8,14 +9,18 @@ export class LspParser implements Parser {
   async parse(paths: string[]): Promise<EntityInfo[]> {
     await this.client.initialize(process.cwd());
     const entities: EntityInfo[] = [];
-    for (const p of paths) {
-      const content = fs.existsSync(p) ? fs.readFileSync(p, 'utf8') : '';
-      const symbols = await this.client.documentSymbols(p, content);
+    const files: string[] = [];
+    for (const p of paths) this.collectFiles(p, files);
+
+    for (const file of files) {
+      const content = fs.readFileSync(file, 'utf8');
+      const symbols = await this.client.documentSymbols(file, content);
       for (const sym of symbols) {
         const ent = this.symbolToEntity(sym);
         if (ent) entities.push(ent);
       }
     }
+
     await this.client.shutdown();
     return entities;
   }
@@ -58,5 +63,17 @@ export class LspParser implements Parser {
       }
     }
     return members;
+  }
+
+  private collectFiles(target: string, files: string[]) {
+    if (!fs.existsSync(target)) return;
+    const stat = fs.statSync(target);
+    if (stat.isDirectory()) {
+      for (const entry of fs.readdirSync(target)) {
+        this.collectFiles(path.join(target, entry), files);
+      }
+    } else if (target.endsWith('.ts')) {
+      files.push(target);
+    }
   }
 }
