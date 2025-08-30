@@ -32,11 +32,6 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
       groups.get(ns)!.push(e);
     }
 
-    const nameMap = new Map<string, string>();
-    for (const e of entities) {
-      nameMap.set(e.name, e.namespace ? `${e.namespace}.${e.name}` : e.name);
-    }
-
     const emitEntity = (e: EntityInfo, indent: string) => {
       lines.push(`${indent}class ${e.name} {`);
       if (e.kind === 'interface') lines.push(`${indent}  <<interface>>`);
@@ -71,10 +66,8 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
     }
 
     for (const e of entities) {
-      const from = nameMap.get(e.name) ?? e.name;
       for (const r of e.relations) {
-        const target = nameMap.get(r.target) ?? r.target;
-        lines.push(relationLine(from, { ...r, target }));
+        lines.push(relationLine(e.name, r));
       }
     }
     return lines.join('\n');

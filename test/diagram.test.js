@@ -16,13 +16,13 @@ test('generates mermaid diagram with relations and stereotypes', async () => {
   assert.ok(diagram.includes('classDiagram'));
   assert.ok(diagram.includes('namespace fixtures'));
   assert.ok(diagram.includes('<<interface>>'));
-  assert.ok(diagram.includes('fixtures.Greeter <|.. fixtures.Person'));
-  assert.ok(diagram.includes('fixtures.Person <|-- fixtures.Employee'));
+  assert.ok(diagram.includes('Greeter <|.. Person'));
+  assert.ok(diagram.includes('Person <|-- Employee'));
   assert.ok(diagram.includes('#age: number'));
   assert.ok(diagram.includes('+Person(name: string, age: number, address: Address)'));
   assert.ok(diagram.includes('+calculateSalary(multiplier: number): number'));
   assert.ok(diagram.includes('+greet(): void'));
-  assert.ok(diagram.includes('fixtures.Person --> fixtures.Address'));
+  assert.ok(diagram.includes('Person --> Address'));
 });
 
 test('prints object for inline property types', async () => {
