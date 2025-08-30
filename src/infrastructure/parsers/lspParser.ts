@@ -72,12 +72,23 @@ export class LspParser implements Parser {
       return entity;
     }
     if (sym.kind === SymbolKind.Variable) {
-      return {
+      const entity: EntityInfo = {
         name: sym.name,
         kind: 'type',
         members: [],
         relations: [],
       };
+      const members: MemberInfo[] = [];
+      for (let i = sym.range.start.line + 1; i < sym.range.end.line; i++) {
+        const line = this.lineAt(lines, i).trim();
+        const m = line.match(/^([A-Za-z0-9_]+)/);
+        if (!m) continue;
+        members.push({ name: m[1], kind: 'property', visibility: 'public' });
+        const typeMatch = line.match(/:\s*([A-Za-z0-9_\.]+)/);
+        if (typeMatch) entity.relations.push({ type: 'association', target: typeMatch[1] });
+      }
+      entity.members = members;
+      return entity;
     }
     return null;
   }
