@@ -18,6 +18,7 @@ export class LspParser implements Parser {
       const lines = content.split(/\r?\n/);
       const symbols = await this.client.documentSymbols(file, content);
       for (const sym of symbols) {
+
         const ent = this.symbolToEntity(sym, lines, namespace);
         if (ent) entities.push(ent);
       }
@@ -34,6 +35,7 @@ export class LspParser implements Parser {
 
     return entities;
   }
+
 
   private symbolToEntity(sym: DocumentSymbol, lines: string[], namespace: string | undefined): EntityInfo | null {
     if (sym.kind === SymbolKind.Class) {

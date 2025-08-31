@@ -37,6 +37,7 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
       if (e.kind === 'interface') lines.push(`${indent}  <<interface>>`);
       if (e.kind === 'enum') lines.push(`${indent}  <<enumeration>>`);
       if (e.isAbstract) lines.push(`${indent}  <<abstract>>`);
+
       for (const m of e.members) {
         const symbol = visibilitySymbol(m.visibility);
         if (m.kind === 'constructor') {

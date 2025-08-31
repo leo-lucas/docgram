@@ -28,6 +28,7 @@ test('LSP parser builds entities from document symbols', async () => {
   assert.equal(entities[0].name, 'Foo');
   assert.equal(entities[0].members.length, 2);
   assert.equal(entities[0].namespace, 'fixtures');
+
 });
 
 test('LSP parser collects files from directories', async () => {
@@ -45,6 +46,7 @@ test('Stdio client parses real files with visibility and relations', async () =>
   const person = entities.find(e => e.name === 'Person');
   assert.ok(person);
   assert.equal(person?.namespace, 'fixtures');
+
   assert.ok(person.implements?.includes('Greeter'));
   assert.ok(person.members.some(m => m.name === 'age' && m.visibility === 'protected' && m.type === 'number'));
   assert.ok(person.members.some(m => m.name === '_name' && m.visibility === 'private' && m.type === 'string'));
@@ -74,3 +76,4 @@ test('LSP parser falls back to object for inline property types', async () => {
   assert.ok(worker.members.some(m => m.name === 'test' && m.type === 'object'));
   assert.equal(worker.namespace, 'fixtures');
 });
+

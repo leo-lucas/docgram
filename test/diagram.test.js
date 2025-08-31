@@ -3,6 +3,7 @@ import { strict as assert } from 'node:assert';
 import path from 'node:path';
 import { rmSync, readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+
 import { DiagramService } from '../dist/core/usecases/generateDiagram.js';
 import { TypeScriptParser } from '../dist/infrastructure/parsers/typescriptParser.js';
 import { MermaidDiagramGenerator } from '../dist/infrastructure/diagram/mermaidGenerator.js';
@@ -14,6 +15,7 @@ test('generates mermaid diagram with relations and stereotypes', async () => {
   const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
   const diagram = await service.generateFromPaths([sample]);
   assert.ok(diagram.includes('classDiagram'));
+
   assert.ok(diagram.includes('namespace fixtures'));
   assert.ok(diagram.includes('<<interface>>'));
   assert.ok(diagram.includes('Greeter <|.. Person'));
