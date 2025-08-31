@@ -50,21 +50,32 @@ test('Stdio client parses real files with visibility and relations', async () =>
   assert.ok(person.implements?.includes('Greeter'));
   assert.ok(person.members.some(m => m.name === 'age' && m.visibility === 'protected' && m.type === 'number'));
   assert.ok(person.members.some(m => m.name === '_name' && m.visibility === 'private' && m.type === 'string'));
+  assert.ok(person.members.some(m => m.name === 'id' && m.isAbstract));
   assert.ok(person.members.some(m => m.kind === 'constructor' && m.parameters?.some(p => p.name === 'address' && p.type === 'Address')));
   assert.ok(person.members.some(m => m.name === 'greet' && m.returnType === 'void'));
   assert.ok(person.members.some(m => m.name === 'calculateSalary' && m.returnType === 'number' && m.parameters?.some(p => p.name === 'multiplier' && p.type === 'number')));
-  assert.ok(person.relations.some(r => r.type === 'association' && r.target === 'Address'));
+  assert.ok(person.relations.some(r => r.type === 'composition' && r.target === 'Address' && r.label === 'address' && r.sourceCardinality === '1' && r.targetCardinality === '1'));
+  assert.ok(person.members.some(m => m.name === 'greet' && m.isAbstract));
   const employee = entities.find(e => e.name === 'Employee');
   assert.ok(employee);
   assert.ok(employee.extends?.includes('Person'));
   assert.ok(employee.relations.some(r => r.type === 'inheritance' && r.target === 'Person'));
-  assert.ok(employee.relations.some(r => r.type === 'association' && r.target === 'Role'));
+  assert.ok(employee.relations.some(r => r.type === 'composition' && r.target === 'Role' && r.label === 'role'));
+  assert.ok(employee.relations.some(r => r.type === 'dependency' && r.target === 'Department' && r.label === 'dept'));
+  const dept = entities.find(e => e.name === 'Department');
+  assert.ok(dept);
+  assert.ok(dept.relations.some(r => r.type === 'aggregation' && r.target === 'Employee' && r.label === 'employees' && r.targetCardinality === '0..*'));
   const address = entities.find(e => e.name === 'Address');
   assert.ok(address);
   assert.ok(address.members.some(m => m.name === 'street'));
   const role = entities.find(e => e.name === 'Role');
   assert.ok(role);
   assert.ok(role.members.some(m => m.name === 'Admin'));
+  const repo = entities.find(e => e.name === 'Repository');
+  assert.ok(repo);
+  assert.ok(repo.typeParameters?.includes('T'));
+  assert.ok(repo.members.some(m => m.name === 'count' && m.isStatic));
+  assert.ok(repo.members.some(m => m.name === 'reset' && m.isStatic));
 });
 
 test('LSP parser falls back to object for inline property types', async () => {

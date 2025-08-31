@@ -12,13 +12,21 @@ function visibilitySymbol(v: MemberInfo['visibility']): string {
 }
 
 function relationLine(from: string, rel: RelationInfo): string {
-  if (rel.type === 'inheritance') {
-    return `  ${rel.target} <|-- ${from}`;
+  const left = rel.sourceCardinality ? ` "${rel.sourceCardinality}"` : '';
+  const right = rel.targetCardinality ? ` "${rel.targetCardinality}"` : '';
+  const label = rel.label ? ` : ${rel.label}` : '';
+  const map: Record<RelationInfo['type'], string> = {
+    inheritance: '<|--',
+    implementation: '<|..',
+    association: '-->',
+    composition: '*--',
+    aggregation: 'o--',
+    dependency: '..>',
+  };
+  if (rel.type === 'inheritance' || rel.type === 'implementation') {
+    return `  ${rel.target} ${map[rel.type]} ${from}`;
   }
-  if (rel.type === 'implementation') {
-    return `  ${rel.target} <|.. ${from}`;
-  }
-  return `  ${from} --> ${rel.target}`;
+  return `  ${from}${left} ${map[rel.type]}${right} ${rel.target}${label}`;
 }
 
 export class MermaidDiagramGenerator implements DiagramGenerator {
@@ -33,26 +41,35 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
     }
 
     const emitEntity = (e: EntityInfo, indent: string) => {
-      lines.push(`${indent}class ${e.name} {`);
+      const className = e.typeParameters?.length
+        ? `${e.name}~${e.typeParameters.join(', ')}~`
+        : e.name;
+      lines.push(`${indent}class ${className} {`);
       if (e.kind === 'interface') lines.push(`${indent}  <<interface>>`);
       if (e.kind === 'enum') lines.push(`${indent}  <<enumeration>>`);
       if (e.isAbstract) lines.push(`${indent}  <<abstract>>`);
 
-      for (const m of e.members) {
-        const symbol = visibilitySymbol(m.visibility);
-        if (m.kind === 'constructor') {
-          const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
-          lines.push(`${indent}  ${symbol}${e.name}(${params})`);
-        } else if (m.kind === 'property') {
-          const type = m.type ? `: ${m.type}` : '';
-          lines.push(`${indent}  ${symbol}${m.name}${type}`);
-        } else {
-          const prefix = m.kind === 'getter' ? 'get ' : m.kind === 'setter' ? 'set ' : '';
-          const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
-          const returnType = m.returnType ? `: ${m.returnType}` : '';
-          lines.push(`${indent}  ${symbol}${prefix}${m.name}(${params})${returnType}`);
+        for (const m of e.members) {
+          let name = m.name;
+          if (m.typeParameters?.length) name += `~${m.typeParameters.join(', ')}~`;
+          const symbol = visibilitySymbol(m.visibility);
+          const staticMark = m.isStatic ? '$' : '';
+          if (m.kind === 'property') {
+            const abstractMark = m.isAbstract ? '*' : '';
+            const type = m.type ? `: ${m.type}` : '';
+            lines.push(`${indent}  ${symbol}${name}${staticMark}${abstractMark}${type}`);
+          } else if (m.kind === 'constructor') {
+            const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
+            const abstractMark = m.isAbstract ? '*' : '';
+            lines.push(`${indent}  ${symbol}${e.name}(${params})${abstractMark}`);
+          } else {
+            const prefix = m.kind === 'getter' ? 'get ' : m.kind === 'setter' ? 'set ' : '';
+            const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
+            const returnType = m.returnType ? `: ${m.returnType}` : '';
+            const abstractMark = m.isAbstract ? '*' : '';
+            lines.push(`${indent}  ${symbol}${prefix}${name}${staticMark}(${params})${abstractMark}${returnType}`);
+          }
         }
-      }
       lines.push(`${indent}}`);
     };
 

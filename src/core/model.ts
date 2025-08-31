@@ -14,17 +14,30 @@ export interface MemberInfo {
   type?: string;
   returnType?: string;
   parameters?: ParameterInfo[];
+  isStatic?: boolean;
+  isAbstract?: boolean;
+  typeParameters?: string[];
 }
 
 export interface RelationInfo {
-  type: 'inheritance' | 'implementation' | 'association';
+  type:
+    | 'inheritance'
+    | 'implementation'
+    | 'association'
+    | 'composition'
+    | 'aggregation'
+    | 'dependency';
   target: string;
+  label?: string;
+  sourceCardinality?: string;
+  targetCardinality?: string;
 }
 
 export interface EntityInfo {
   name: string;
   kind: 'class' | 'interface' | 'enum' | 'type';
   isAbstract?: boolean;
+  typeParameters?: string[];
   extends?: string[];
   implements?: string[];
   namespace?: string;
