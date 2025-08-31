@@ -1,10 +1,10 @@
 {
-  "name": "doc-graphc",
+  "name": "doc-graph",
   "version": "1.0.0",
   "description": "Generate diagrams from source code",
   "main": "dist/index.js",
   "bin": {
-    "doc-graphc": "dist/index.js"
+    "doc-graph": "dist/index.js"
   },
   "files": ["dist"],
   "type": "module",
