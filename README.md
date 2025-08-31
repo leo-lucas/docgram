@@ -42,6 +42,27 @@ docgram diagram --parser lsp <caminho-do-arquivo-ou-pasta>
 docgram docs <caminho-do-arquivo-ou-pasta>
 ```
 
+### Usar em um script próprio
+
+Também é possível importar as classes do pacote para gerar diagramas no seu
+próprio código:
+
+```ts
+import { buildService } from 'docgram';
+
+async function main() {
+  const service = buildService('ts'); // ou 'lsp'
+  const diagram = await service.generateFromPaths(['src']);
+  console.log(diagram);
+}
+
+main();
+```
+
+Para maior flexibilidade, o pacote também exporta `DiagramService`,
+`TypeScriptParser`, `MermaidDiagramGenerator`, `LspParser` e
+`StdioLanguageClient` para composições personalizadas.
+
 ## Desenvolvimento
 
 ```bash
