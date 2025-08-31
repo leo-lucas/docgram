@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "diagram": "npm run build && node dist/index.js",
+    "diagram": "npm run build && node dist/index.js diagram",
+    "docs": "npm run build && node dist/index.js docs",
     "test": "npm run build && node --test"
   },
   "keywords": [],

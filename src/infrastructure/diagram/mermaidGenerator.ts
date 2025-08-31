@@ -24,28 +24,48 @@ function relationLine(from: string, rel: RelationInfo): string {
 export class MermaidDiagramGenerator implements DiagramGenerator {
   generate(entities: EntityInfo[]): string {
     const lines: string[] = ['classDiagram'];
+
+    const groups = new Map<string | undefined, EntityInfo[]>();
     for (const e of entities) {
-      lines.push(`  class ${e.name} {`);
-      if (e.kind === 'interface') lines.push('    <<interface>>');
-      if (e.kind === 'enum') lines.push('    <<enumeration>>');
-      if (e.isAbstract) lines.push('    <<abstract>>');
+      const ns = e.namespace;
+      if (!groups.has(ns)) groups.set(ns, []);
+      groups.get(ns)!.push(e);
+    }
+
+    const emitEntity = (e: EntityInfo, indent: string) => {
+      lines.push(`${indent}class ${e.name} {`);
+      if (e.kind === 'interface') lines.push(`${indent}  <<interface>>`);
+      if (e.kind === 'enum') lines.push(`${indent}  <<enumeration>>`);
+      if (e.isAbstract) lines.push(`${indent}  <<abstract>>`);
+
       for (const m of e.members) {
         const symbol = visibilitySymbol(m.visibility);
         if (m.kind === 'constructor') {
           const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
-          lines.push(`    ${symbol}${e.name}(${params})`);
+          lines.push(`${indent}  ${symbol}${e.name}(${params})`);
         } else if (m.kind === 'property') {
           const type = m.type ? `: ${m.type}` : '';
-          lines.push(`    ${symbol}${m.name}${type}`);
+          lines.push(`${indent}  ${symbol}${m.name}${type}`);
         } else {
           const prefix = m.kind === 'getter' ? 'get ' : m.kind === 'setter' ? 'set ' : '';
           const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
           const returnType = m.returnType ? `: ${m.returnType}` : '';
-          lines.push(`    ${symbol}${prefix}${m.name}(${params})${returnType}`);
+          lines.push(`${indent}  ${symbol}${prefix}${m.name}(${params})${returnType}`);
         }
       }
-      lines.push('  }');
+      lines.push(`${indent}}`);
+    };
+
+    for (const [ns, ents] of groups) {
+      if (ns) {
+        lines.push(`  namespace ${ns} {`);
+        for (const e of ents) emitEntity(e, '    ');
+        lines.push('  }');
+      } else {
+        for (const e of ents) emitEntity(e, '  ');
+      }
     }
+
     for (const e of entities) {
       for (const r of e.relations) {
         lines.push(relationLine(e.name, r));

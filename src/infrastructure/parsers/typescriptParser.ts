@@ -14,6 +14,7 @@ export class TypeScriptParser implements Parser {
     const entities: EntityInfo[] = [];
 
     for (const sourceFile of project.getSourceFiles()) {
+      const namespace = this.namespaceOf(sourceFile.getFilePath());
       // classes
       for (const c of sourceFile.getClasses()) {
         const entity: EntityInfo = {
@@ -22,6 +23,7 @@ export class TypeScriptParser implements Parser {
           isAbstract: c.isAbstract(),
           extends: c.getExtends()?.getExpression().getText() ? [c.getExtends()!.getExpression().getText()] : [],
           implements: c.getImplements().map(i => i.getExpression().getText()),
+          namespace,
           members: [],
           relations: [],
         };
@@ -93,6 +95,7 @@ export class TypeScriptParser implements Parser {
           name: i.getName() ?? 'Anonymous',
           kind: 'interface',
           extends: i.getExtends().map(e => e.getExpression().getText()),
+          namespace,
           members: [],
           relations: [],
         };
@@ -131,6 +134,7 @@ export class TypeScriptParser implements Parser {
         const entity: EntityInfo = {
           name: e.getName() ?? 'Anonymous',
           kind: 'enum',
+          namespace,
           members: [],
           relations: [],
         };
@@ -151,6 +155,7 @@ export class TypeScriptParser implements Parser {
           const entity: EntityInfo = {
             name: t.getName(),
             kind: 'type',
+            namespace,
             members: [],
             relations: [],
           };
@@ -192,8 +197,14 @@ export class TypeScriptParser implements Parser {
   }
 
   private formatType(t: Type): string {
+    if (/^\s*\{/.test(t.getText())) return 'object';
     const symName = t.getSymbol()?.getName();
     const raw = symName && !symName.startsWith('__') ? symName : t.getText();
     return raw.replace(/import\([^\)]+\)\./g, '');
+  }
+
+  private namespaceOf(file: string): string | undefined {
+    const dir = path.relative(process.cwd(), path.dirname(file));
+    return dir ? dir.split(path.sep).join('.') : undefined;
   }
 }

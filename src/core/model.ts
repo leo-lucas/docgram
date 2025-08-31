@@ -27,6 +27,7 @@ export interface EntityInfo {
   isAbstract?: boolean;
   extends?: string[];
   implements?: string[];
+  namespace?: string;
   members: MemberInfo[];
   relations: RelationInfo[];
 }
