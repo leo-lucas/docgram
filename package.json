@@ -1,14 +1,19 @@
 {
-  "name": "doc-graphc",
+  "name": "doc-graph",
   "version": "1.0.0",
   "description": "Generate diagrams from source code",
   "main": "dist/index.js",
+  "bin": {
+    "doc-graph": "dist/index.js"
+  },
+  "files": ["dist"],
   "type": "module",
   "scripts": {
     "build": "tsc",
     "diagram": "npm run build && node dist/index.js diagram",
     "docs": "npm run build && node dist/index.js docs",
-    "test": "npm run build && node --test"
+    "test": "npm run build && node --test",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [],
   "author": "",

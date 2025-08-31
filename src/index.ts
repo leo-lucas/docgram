@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { Command } from 'commander';
 import { writeFileSync, statSync } from 'node:fs';
 import path from 'node:path';
@@ -9,7 +10,7 @@ import { StdioLanguageClient } from './infrastructure/lsp/stdioClient.js';
 
 const program = new Command();
 
-program.name('doc-graphc').description('Generate diagrams from source code');
+program.name('doc-graph').description('Generate diagrams from source code');
 
 function buildService(parserOption: string) {
   const generator = new MermaidDiagramGenerator();
