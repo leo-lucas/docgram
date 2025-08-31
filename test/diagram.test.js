@@ -20,6 +20,7 @@ test('generates mermaid diagram with relations and stereotypes', async () => {
   assert.ok(diagram.includes('<<interface>>'));
   assert.ok(diagram.includes('Greeter <|.. Person'));
   assert.ok(diagram.includes('Person <|-- Employee'));
+  assert.ok(diagram.includes('id*: number'));
   assert.ok(diagram.includes('#age: number'));
   assert.ok(diagram.includes('+Person(name: string, age: number, address: Address)'));
   assert.ok(diagram.includes('+calculateSalary(multiplier: number): number'));
@@ -34,7 +35,7 @@ test('generates mermaid diagram with relations and stereotypes', async () => {
 test('prints object for inline property types', async () => {
   const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
   const diagram = await service.generateFromPaths([worker]);
-  assert.ok(diagram.includes('<i>test</i>: object'));
+  assert.ok(diagram.includes('test*: object'));
 });
 
 test('docs command writes README with diagram', () => {

@@ -12,6 +12,7 @@ export enum Role {
 }
 
 export abstract class Person implements Greeter {
+  abstract id: number;
   protected age: number;
   private _name: string;
   address: Address;

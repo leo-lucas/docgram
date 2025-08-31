@@ -55,9 +55,9 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
           const symbol = visibilitySymbol(m.visibility);
           if (m.kind === 'property') {
             if (m.isStatic) name = `<u>${name}</u>`;
-            if (m.isAbstract) name = `<i>${name}</i>`;
+            const abstractMark = m.isAbstract ? '*' : '';
             const type = m.type ? `: ${m.type}` : '';
-            lines.push(`${indent}  ${symbol}${name}${type}`);
+            lines.push(`${indent}  ${symbol}${name}${abstractMark}${type}`);
           } else if (m.kind === 'constructor') {
             const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
             const abstractMark = m.isAbstract ? '*' : '';

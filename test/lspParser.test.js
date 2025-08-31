@@ -50,6 +50,7 @@ test('Stdio client parses real files with visibility and relations', async () =>
   assert.ok(person.implements?.includes('Greeter'));
   assert.ok(person.members.some(m => m.name === 'age' && m.visibility === 'protected' && m.type === 'number'));
   assert.ok(person.members.some(m => m.name === '_name' && m.visibility === 'private' && m.type === 'string'));
+  assert.ok(person.members.some(m => m.name === 'id' && m.isAbstract));
   assert.ok(person.members.some(m => m.kind === 'constructor' && m.parameters?.some(p => p.name === 'address' && p.type === 'Address')));
   assert.ok(person.members.some(m => m.name === 'greet' && m.returnType === 'void'));
   assert.ok(person.members.some(m => m.name === 'calculateSalary' && m.returnType === 'number' && m.parameters?.some(p => p.name === 'multiplier' && p.type === 'number')));
