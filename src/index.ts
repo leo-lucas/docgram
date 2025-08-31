@@ -2,6 +2,7 @@
 import { Command } from 'commander';
 import { writeFileSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DiagramService } from './core/usecases/generateDiagram.js';
 import { TypeScriptParser } from './infrastructure/parsers/typescriptParser.js';
 import { MermaidDiagramGenerator } from './infrastructure/diagram/mermaidGenerator.js';
@@ -12,7 +13,7 @@ const program = new Command();
 
 program.name('docgram').description('Generate diagrams from source code');
 
-function buildService(parserOption: string) {
+export function buildService(parserOption: string) {
   const generator = new MermaidDiagramGenerator();
   let parser;
   if (parserOption === 'lsp') {
@@ -50,4 +51,14 @@ program
     console.log(`README written to ${readmePath}`);
   });
 
-program.parse();
+if (fileURLToPath(import.meta.url) === process.argv[1]) {
+  program.parse();
+}
+
+export {
+  DiagramService,
+  TypeScriptParser,
+  MermaidDiagramGenerator,
+  LspParser,
+  StdioLanguageClient,
+};
