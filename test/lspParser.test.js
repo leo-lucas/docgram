@@ -75,6 +75,7 @@ test('Stdio client parses real files with visibility and relations', async () =>
   assert.ok(repo);
   assert.ok(repo.typeParameters?.includes('T'));
   assert.ok(repo.members.some(m => m.name === 'count' && m.isStatic));
+  assert.ok(repo.members.some(m => m.name === 'reset' && m.isStatic));
 });
 
 test('LSP parser falls back to object for inline property types', async () => {

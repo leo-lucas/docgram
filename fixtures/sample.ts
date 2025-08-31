@@ -50,6 +50,9 @@ export class Department {
 
 export class Repository<T> {
   static count = 0;
+  static reset() {
+    Repository.count = 0;
+  }
   items: T[] = [];
   add(item: T): void {
     this.items.push(item);

@@ -29,7 +29,8 @@ test('generates mermaid diagram with relations and stereotypes', async () => {
   assert.ok(diagram.includes('Department "1" o-- "0..*" Employee : employees'));
   assert.ok(diagram.includes('Employee "1" ..> "1" Department : dept'));
   assert.ok(diagram.includes('class Repository~T~'));
-  assert.ok(diagram.includes('<u>count</u>: number'));
+  assert.ok(diagram.includes('count$: number'));
+  assert.ok(diagram.includes('+reset$(): void'));
 });
 
 test('prints object for inline property types', async () => {

@@ -53,22 +53,21 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
           let name = m.name;
           if (m.typeParameters?.length) name += `~${m.typeParameters.join(', ')}~`;
           const symbol = visibilitySymbol(m.visibility);
+          const staticMark = m.isStatic ? '$' : '';
           if (m.kind === 'property') {
-            if (m.isStatic) name = `<u>${name}</u>`;
             const abstractMark = m.isAbstract ? '*' : '';
             const type = m.type ? `: ${m.type}` : '';
-            lines.push(`${indent}  ${symbol}${name}${abstractMark}${type}`);
+            lines.push(`${indent}  ${symbol}${name}${staticMark}${abstractMark}${type}`);
           } else if (m.kind === 'constructor') {
             const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
             const abstractMark = m.isAbstract ? '*' : '';
             lines.push(`${indent}  ${symbol}${e.name}(${params})${abstractMark}`);
           } else {
-            if (m.isStatic) name = `<u>${name}</u>`;
             const prefix = m.kind === 'getter' ? 'get ' : m.kind === 'setter' ? 'set ' : '';
             const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
             const returnType = m.returnType ? `: ${m.returnType}` : '';
             const abstractMark = m.isAbstract ? '*' : '';
-            lines.push(`${indent}  ${symbol}${prefix}${name}(${params})${abstractMark}${returnType}`);
+            lines.push(`${indent}  ${symbol}${prefix}${name}${staticMark}(${params})${abstractMark}${returnType}`);
           }
         }
       lines.push(`${indent}}`);
