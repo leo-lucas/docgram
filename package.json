@@ -1,10 +1,10 @@
 {
-  "name": "doc-graph",
+  "name": "docgram",
   "version": "1.0.0",
   "description": "Generate diagrams from source code",
   "main": "dist/index.js",
   "bin": {
-    "doc-graph": "dist/index.js"
+    "docgram": "dist/index.js"
   },
   "files": ["dist"],
   "type": "module",
