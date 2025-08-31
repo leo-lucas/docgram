@@ -27,7 +27,7 @@ test('generates mermaid diagram with relations and stereotypes', async () => {
   assert.ok(diagram.includes('Person "1" *-- "1" Address : address'));
   assert.ok(diagram.includes('Department "1" o-- "0..*" Employee : employees'));
   assert.ok(diagram.includes('Employee "1" ..> "1" Department : dept'));
-  assert.ok(diagram.includes('class Repository<T>'));
+  assert.ok(diagram.includes('class Repository~T~'));
   assert.ok(diagram.includes('<u>count</u>: number'));
 });
 

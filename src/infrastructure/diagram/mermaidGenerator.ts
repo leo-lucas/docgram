@@ -42,7 +42,7 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
 
     const emitEntity = (e: EntityInfo, indent: string) => {
       const className = e.typeParameters?.length
-        ? `${e.name}<${e.typeParameters.join(', ')}>`
+        ? `${e.name}~${e.typeParameters.join(', ')}~`
         : e.name;
       lines.push(`${indent}class ${className} {`);
       if (e.kind === 'interface') lines.push(`${indent}  <<interface>>`);
@@ -51,7 +51,7 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
 
       for (const m of e.members) {
         let name = m.name;
-        if (m.typeParameters?.length) name += `<${m.typeParameters.join(', ')}>`;
+        if (m.typeParameters?.length) name += `~${m.typeParameters.join(', ')}~`;
         if (m.isStatic) name = `<u>${name}</u>`;
         if (m.isAbstract) name = `<i>${name}</i>`;
         const symbol = visibilitySymbol(m.visibility);
