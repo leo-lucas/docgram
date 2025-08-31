@@ -1,7 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { Project, SyntaxKind, Type } from 'ts-morph';
-import { EntityInfo, Parser, ParameterInfo } from '../../core/model.js';
+import {
+  EntityInfo,
+  Parser,
+  ParameterInfo,
+  RelationInfo,
+} from '../../core/model.js';
 
 export class TypeScriptParser implements Parser {
   async parse(paths: string[]): Promise<EntityInfo[]> {
@@ -21,6 +26,7 @@ export class TypeScriptParser implements Parser {
           name: c.getName() ?? 'Anonymous',
           kind: 'class',
           isAbstract: c.isAbstract(),
+          typeParameters: c.getTypeParameters().map(tp => tp.getText()),
           extends: c.getExtends()?.getExpression().getText() ? [c.getExtends()!.getExpression().getText()] : [],
           implements: c.getImplements().map(i => i.getExpression().getText()),
           namespace,
@@ -35,11 +41,24 @@ export class TypeScriptParser implements Parser {
             kind: 'property',
             visibility: p.getScope() ?? 'public',
             type: typeText,
+            isStatic: p.isStatic?.() ?? false,
+            isAbstract: p.isAbstract?.() ?? false,
           });
-          const symbol = propertyType.getAliasSymbol() ?? propertyType.getSymbol();
+          const relType = this.isCollection(propertyType)
+            ? propertyType.getArrayElementType() || propertyType.getTypeArguments()[0]
+            : propertyType;
+          const symbol = relType.getAliasSymbol() ?? relType.getSymbol();
           const typeName = symbol?.getName();
-          if (typeName && !typeName.startsWith('__'))
-            entity.relations.push({ type: 'association', target: typeName });
+          if (typeName && !typeName.startsWith('__')) {
+            const rel: RelationInfo = {
+              type: this.isCollection(propertyType) ? 'aggregation' : 'composition',
+              target: typeName,
+              label: p.getName(),
+              sourceCardinality: '1',
+              targetCardinality: this.isCollection(propertyType) ? '0..*' : '1',
+            };
+            entity.relations.push(rel);
+          }
         });
         c.getConstructors().forEach(cons => {
           const parameters: ParameterInfo[] = cons.getParameters().map(prm => ({
@@ -51,6 +70,24 @@ export class TypeScriptParser implements Parser {
             kind: 'constructor',
             visibility: cons.getScope() ?? 'public',
             parameters,
+          });
+          cons.getParameters().forEach(prm => {
+            const t = prm.getType();
+            const relType = this.isCollection(t)
+              ? t.getArrayElementType() || t.getTypeArguments()[0]
+              : t;
+            const symbol = relType.getAliasSymbol() ?? relType.getSymbol();
+            const typeName = symbol?.getName();
+            if (typeName && !typeName.startsWith('__')) {
+              const rel: RelationInfo = {
+                type: 'dependency',
+                target: typeName,
+                label: prm.getName(),
+                sourceCardinality: '1',
+                targetCardinality: this.isCollection(t) ? '0..*' : '1',
+              };
+              entity.relations.push(rel);
+            }
           });
         });
         c.getMethods().forEach(m => {
@@ -64,7 +101,42 @@ export class TypeScriptParser implements Parser {
             visibility: m.getScope() ?? 'public',
             returnType: this.formatType(m.getReturnType()),
             parameters,
+            isStatic: m.isStatic?.() ?? false,
+            isAbstract: m.isAbstract?.() ?? false,
+            typeParameters: m.getTypeParameters().map(tp => tp.getText()),
           });
+          m.getParameters().forEach(prm => {
+            const t = prm.getType();
+            const relType = this.isCollection(t)
+              ? t.getArrayElementType() || t.getTypeArguments()[0]
+              : t;
+            const symbol = relType.getAliasSymbol() ?? relType.getSymbol();
+            const typeName = symbol?.getName();
+            if (typeName && !typeName.startsWith('__')) {
+              const rel: RelationInfo = {
+                type: 'dependency',
+                target: typeName,
+                label: prm.getName(),
+                sourceCardinality: '1',
+                targetCardinality: this.isCollection(t) ? '0..*' : '1',
+              };
+              entity.relations.push(rel);
+            }
+          });
+          const rt = m.getReturnType();
+          const relRt = this.isCollection(rt)
+            ? rt.getArrayElementType() || rt.getTypeArguments()[0]
+            : rt;
+          const rts = relRt.getAliasSymbol() ?? relRt.getSymbol();
+          const rtn = rts?.getName();
+          if (rtn && !rtn.startsWith('__')) {
+            entity.relations.push({
+              type: 'dependency',
+              target: rtn,
+              sourceCardinality: '1',
+              targetCardinality: this.isCollection(rt) ? '0..*' : '1',
+            });
+          }
         });
         c.getGetAccessors().forEach(g => {
           entity.members.push({
@@ -72,6 +144,7 @@ export class TypeScriptParser implements Parser {
             kind: 'getter',
             visibility: g.getScope() ?? 'public',
             returnType: this.formatType(g.getReturnType()),
+            isStatic: g.isStatic?.() ?? false,
           });
         });
         c.getSetAccessors().forEach(s => {
@@ -84,6 +157,7 @@ export class TypeScriptParser implements Parser {
             kind: 'setter',
             visibility: s.getScope() ?? 'public',
             parameters,
+            isStatic: s.isStatic?.() ?? false,
           });
         });
         entities.push(entity);
@@ -94,6 +168,7 @@ export class TypeScriptParser implements Parser {
         const entity: EntityInfo = {
           name: i.getName() ?? 'Anonymous',
           kind: 'interface',
+          typeParameters: i.getTypeParameters().map(tp => tp.getText()),
           extends: i.getExtends().map(e => e.getExpression().getText()),
           namespace,
           members: [],
@@ -107,11 +182,23 @@ export class TypeScriptParser implements Parser {
             kind: 'property',
             visibility: 'public',
             type: typeText,
+            isAbstract: true,
           });
-          const symbol = propertyType.getAliasSymbol() ?? propertyType.getSymbol();
+          const relType = this.isCollection(propertyType)
+            ? propertyType.getArrayElementType() || propertyType.getTypeArguments()[0]
+            : propertyType;
+          const symbol = relType.getAliasSymbol() ?? relType.getSymbol();
           const typeName = symbol?.getName();
-          if (typeName && !typeName.startsWith('__'))
-            entity.relations.push({ type: 'association', target: typeName });
+          if (typeName && !typeName.startsWith('__')) {
+            const rel: RelationInfo = {
+              type: this.isCollection(propertyType) ? 'aggregation' : 'association',
+              target: typeName,
+              label: p.getName(),
+              sourceCardinality: '1',
+              targetCardinality: this.isCollection(propertyType) ? '0..*' : '1',
+            };
+            entity.relations.push(rel);
+          }
         });
         i.getMethods().forEach(m => {
           const parameters: ParameterInfo[] = m.getParameters().map(prm => ({
@@ -124,7 +211,40 @@ export class TypeScriptParser implements Parser {
             visibility: 'public',
             returnType: this.formatType(m.getReturnType()),
             parameters,
+            isAbstract: true,
+            typeParameters: m.getTypeParameters().map(tp => tp.getText()),
           });
+          m.getParameters().forEach(prm => {
+            const t = prm.getType();
+            const relType = this.isCollection(t)
+              ? t.getArrayElementType() || t.getTypeArguments()[0]
+              : t;
+            const symbol = relType.getAliasSymbol() ?? relType.getSymbol();
+            const typeName = symbol?.getName();
+            if (typeName && !typeName.startsWith('__')) {
+              entity.relations.push({
+                type: 'dependency',
+                target: typeName,
+                label: prm.getName(),
+                sourceCardinality: '1',
+                targetCardinality: this.isCollection(t) ? '0..*' : '1',
+              });
+            }
+          });
+          const rt = m.getReturnType();
+          const relRt = this.isCollection(rt)
+            ? rt.getArrayElementType() || rt.getTypeArguments()[0]
+            : rt;
+          const rts = relRt.getAliasSymbol() ?? relRt.getSymbol();
+          const rtn = rts?.getName();
+          if (rtn && !rtn.startsWith('__')) {
+            entity.relations.push({
+              type: 'dependency',
+              target: rtn,
+              sourceCardinality: '1',
+              targetCardinality: this.isCollection(rt) ? '0..*' : '1',
+            });
+          }
         });
         entities.push(entity);
       }
@@ -196,8 +316,22 @@ export class TypeScriptParser implements Parser {
     }
   }
 
+  private isCollection(t: Type): boolean {
+    const text = t.getText();
+    return (
+      t.isArray() ||
+      /^Array<.+>$/i.test(text) ||
+      /^Set<.+>$/i.test(text) ||
+      /^Map<.+>$/i.test(text)
+    );
+  }
+
   private formatType(t: Type): string {
     if (/^\s*\{/.test(t.getText())) return 'object';
+    if (t.isArray()) {
+      const elem = t.getArrayElementType();
+      return `${this.formatType(elem!)}[]`;
+    }
     const symName = t.getSymbol()?.getName();
     const raw = symName && !symName.startsWith('__') ? symName : t.getText();
     return raw.replace(/import\([^\)]+\)\./g, '');

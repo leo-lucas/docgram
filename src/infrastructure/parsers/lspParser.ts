@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Parser, EntityInfo, MemberInfo, LanguageClient, ParameterInfo } from '../../core/model.js';
+import { Parser, EntityInfo, MemberInfo, LanguageClient, ParameterInfo, RelationInfo } from '../../core/model.js';
 import { DocumentSymbol, SymbolKind } from 'vscode-languageserver-protocol';
 
 export class LspParser implements Parser {
@@ -44,6 +44,7 @@ export class LspParser implements Parser {
         name: sym.name,
         kind: 'class',
         isAbstract: /\babstract\b/.test(header),
+        typeParameters: this.parseGenerics(header),
         extends: this.parseExtends(header),
         implements: this.parseImplements(header),
         namespace,
@@ -58,6 +59,7 @@ export class LspParser implements Parser {
       const entity: EntityInfo = {
         name: sym.name,
         kind: 'interface',
+        typeParameters: this.parseGenerics(header),
         extends: this.parseExtends(header),
         namespace,
         members: [],
@@ -107,21 +109,74 @@ export class LspParser implements Parser {
       let visibility: 'public' | 'protected' | 'private' = 'public';
       if (/\bprivate\b/.test(line)) visibility = 'private';
       else if (/\bprotected\b/.test(line)) visibility = 'protected';
+      const isStatic = /\bstatic\b/.test(line);
+      const isAbstract = /\babstract\b/.test(line);
 
       if (child.kind === SymbolKind.Field || child.kind === SymbolKind.Property) {
         const type = this.parsePropertyType(line);
-        members.push({ name: child.name, kind: 'property', visibility, type });
-        if (type) entity.relations.push({ type: 'association', target: type });
+        members.push({ name: child.name, kind: 'property', visibility, type, isStatic, isAbstract });
+        if (type) {
+          const relationType: RelationInfo['type'] = entity.kind === 'class'
+            ? (this.isCollection(type) ? 'aggregation' : 'composition')
+            : (this.isCollection(type) ? 'aggregation' : 'association');
+          const rel: RelationInfo = {
+            type: relationType,
+            target: this.baseType(type),
+            label: child.name,
+            sourceCardinality: '1',
+            targetCardinality: this.isCollection(type) ? '0..*' : '1',
+          };
+          entity.relations.push(rel);
+        }
       } else if (child.kind === SymbolKind.Constructor) {
         const parameters = this.parseParams(line);
-        members.push({ name: 'constructor', kind: 'constructor', visibility, parameters });
+        members.push({ name: 'constructor', kind: 'constructor', visibility, parameters, isStatic });
+        parameters.forEach(prm => {
+          const rel: RelationInfo = {
+            type: 'dependency',
+            target: this.baseType(prm.type),
+            label: prm.name,
+            sourceCardinality: '1',
+            targetCardinality: this.isCollection(prm.type) ? '0..*' : '1',
+          };
+          entity.relations.push(rel);
+        });
       } else if (child.kind === SymbolKind.Method || child.kind === SymbolKind.Function) {
         let kind: MemberInfo['kind'] = 'method';
         if (/^get\s+/.test(line)) kind = 'getter';
         else if (/^set\s+/.test(line)) kind = 'setter';
         const parameters = this.parseParams(line);
         const returnType = kind === 'setter' ? undefined : this.parseReturn(line);
-        members.push({ name: child.name, kind, visibility, parameters: parameters.length ? parameters : undefined, returnType });
+        const typeParameters = this.parseGenerics(line);
+        members.push({
+          name: child.name,
+          kind,
+          visibility,
+          parameters: parameters.length ? parameters : undefined,
+          returnType,
+          isStatic,
+          isAbstract,
+          typeParameters: typeParameters.length ? typeParameters : undefined,
+        });
+        parameters.forEach(prm => {
+          const rel: RelationInfo = {
+            type: 'dependency',
+            target: this.baseType(prm.type),
+            label: prm.name,
+            sourceCardinality: '1',
+            targetCardinality: this.isCollection(prm.type) ? '0..*' : '1',
+          };
+          entity.relations.push(rel);
+        });
+        if (returnType) {
+          const rel: RelationInfo = {
+            type: 'dependency',
+            target: this.baseType(returnType),
+            sourceCardinality: '1',
+            targetCardinality: this.isCollection(returnType) ? '0..*' : '1',
+          };
+          entity.relations.push(rel);
+        }
       } else if (child.kind === SymbolKind.EnumMember || child.kind === SymbolKind.Constant) {
         members.push({ name: child.name, kind: 'property', visibility: 'public' });
       }
@@ -154,11 +209,25 @@ export class LspParser implements Parser {
   }
 
   private parsePropertyType(line: string): string | undefined {
-    const m = line.match(/:\s*([^;]+)/);
+    const m = line.match(/:\s*([^;=]+)/);
     if (!m) return undefined;
     const type = m[1].trim();
     if (type === '{') return 'object';
     return type;
+  }
+
+  private parseGenerics(header: string): string[] {
+    const m = header.match(/<([^>]+)>/);
+    if (!m) return [];
+    return m[1].split(',').map(s => s.trim()).filter(Boolean);
+  }
+
+  private isCollection(type: string): boolean {
+    return /(\[\]|^Array<.+>|^Set<.+>|^Map<.+>)/.test(type);
+  }
+
+  private baseType(type: string): string {
+    return type.replace(/<[^>]+>/, '').replace(/\[\]$/, '').trim();
   }
 
   private parseExtends(header: string): string[] {
