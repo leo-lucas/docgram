@@ -49,25 +49,28 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
       if (e.kind === 'enum') lines.push(`${indent}  <<enumeration>>`);
       if (e.isAbstract) lines.push(`${indent}  <<abstract>>`);
 
-      for (const m of e.members) {
-        let name = m.name;
-        if (m.typeParameters?.length) name += `~${m.typeParameters.join(', ')}~`;
-        if (m.isStatic) name = `<u>${name}</u>`;
-        if (m.isAbstract) name = `<i>${name}</i>`;
-        const symbol = visibilitySymbol(m.visibility);
-        if (m.kind === 'constructor') {
-          const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
-          lines.push(`${indent}  ${symbol}${e.name}(${params})`);
-        } else if (m.kind === 'property') {
-          const type = m.type ? `: ${m.type}` : '';
-          lines.push(`${indent}  ${symbol}${name}${type}`);
-        } else {
-          const prefix = m.kind === 'getter' ? 'get ' : m.kind === 'setter' ? 'set ' : '';
-          const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
-          const returnType = m.returnType ? `: ${m.returnType}` : '';
-          lines.push(`${indent}  ${symbol}${prefix}${name}(${params})${returnType}`);
+        for (const m of e.members) {
+          let name = m.name;
+          if (m.typeParameters?.length) name += `~${m.typeParameters.join(', ')}~`;
+          const symbol = visibilitySymbol(m.visibility);
+          if (m.kind === 'property') {
+            if (m.isStatic) name = `<u>${name}</u>`;
+            if (m.isAbstract) name = `<i>${name}</i>`;
+            const type = m.type ? `: ${m.type}` : '';
+            lines.push(`${indent}  ${symbol}${name}${type}`);
+          } else if (m.kind === 'constructor') {
+            const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
+            const abstractMark = m.isAbstract ? '*' : '';
+            lines.push(`${indent}  ${symbol}${e.name}(${params})${abstractMark}`);
+          } else {
+            if (m.isStatic) name = `<u>${name}</u>`;
+            const prefix = m.kind === 'getter' ? 'get ' : m.kind === 'setter' ? 'set ' : '';
+            const params = (m.parameters || []).map(p => `${p.name}: ${p.type}`).join(', ');
+            const returnType = m.returnType ? `: ${m.returnType}` : '';
+            const abstractMark = m.isAbstract ? '*' : '';
+            lines.push(`${indent}  ${symbol}${prefix}${name}(${params})${abstractMark}${returnType}`);
+          }
         }
-      }
       lines.push(`${indent}}`);
     };
 

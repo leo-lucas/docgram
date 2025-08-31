@@ -23,7 +23,7 @@ test('generates mermaid diagram with relations and stereotypes', async () => {
   assert.ok(diagram.includes('#age: number'));
   assert.ok(diagram.includes('+Person(name: string, age: number, address: Address)'));
   assert.ok(diagram.includes('+calculateSalary(multiplier: number): number'));
-  assert.ok(diagram.includes('+greet(): void'));
+    assert.ok(diagram.includes('+greet()*: void'));
   assert.ok(diagram.includes('Person "1" *-- "1" Address : address'));
   assert.ok(diagram.includes('Department "1" o-- "0..*" Employee : employees'));
   assert.ok(diagram.includes('Employee "1" ..> "1" Department : dept'));
