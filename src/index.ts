@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { Command } from 'commander';
 import { writeFileSync, statSync } from 'node:fs';
 import path from 'node:path';
