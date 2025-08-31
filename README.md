@@ -1,4 +1,4 @@
-# doc-graph
+# docgram
 
 Gera diagramas UML no formato [Mermaid](https://mermaid.js.org/) a partir de arquivos de código. Atualmente suporta projetos TypeScript e reconhece classes, interfaces, tipos e enums com construtores, parâmetros, tipos de atributos, retornos de métodos, modificadores de acesso e relacionamentos. As entidades são agrupadas por namespaces seguindo a hierarquia de diretórios. A arquitetura permite adicionar outros parsers no futuro.
 
@@ -7,15 +7,15 @@ Gera diagramas UML no formato [Mermaid](https://mermaid.js.org/) a partir de arq
 ### Global
 
 ```bash
-npm install -g doc-graph
+npm install -g docgram
 ```
 
 ### Local
 
 ```bash
-npm install doc-graph
+npm install docgram
 # ou usando npx
-npx doc-graph diagram src
+npx docgram diagram src
 ```
 
 ## Uso
@@ -23,19 +23,19 @@ npx doc-graph diagram src
 ### Gerar diagrama no console
 
 ```bash
-doc-graph diagram <caminho-do-arquivo-ou-pasta>
+docgram diagram <caminho-do-arquivo-ou-pasta>
 ```
 
 #### Utilizando o parser LSP
 
 ```bash
-doc-graph diagram --parser lsp <caminho-do-arquivo-ou-pasta>
+docgram diagram --parser lsp <caminho-do-arquivo-ou-pasta>
 ```
 
 ### Gerar README.md com o diagrama
 
 ```bash
-doc-graph docs <caminho-do-arquivo-ou-pasta>
+docgram docs <caminho-do-arquivo-ou-pasta>
 ```
 
 ## Desenvolvimento

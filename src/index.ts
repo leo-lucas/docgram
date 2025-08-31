@@ -10,7 +10,7 @@ import { StdioLanguageClient } from './infrastructure/lsp/stdioClient.js';
 
 const program = new Command();
 
-program.name('doc-graph').description('Generate diagrams from source code');
+program.name('docgram').description('Generate diagrams from source code');
 
 function buildService(parserOption: string) {
   const generator = new MermaidDiagramGenerator();
