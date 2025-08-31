@@ -2,6 +2,10 @@
 
 Gera diagramas UML no formato [Mermaid](https://mermaid.js.org/) a partir de arquivos de código. Atualmente suporta projetos TypeScript e reconhece classes, interfaces, tipos e enums com construtores, parâmetros, tipos de atributos, retornos de métodos, modificadores de acesso e relacionamentos. As entidades são agrupadas por namespaces seguindo a hierarquia de diretórios. A arquitetura permite adicionar outros parsers no futuro.
 
+## Requisitos
+
+- Node.js >= 20
+
 ## Instalação
 
 ### Global
