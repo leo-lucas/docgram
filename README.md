@@ -47,4 +47,11 @@ npm test
 
 ## Publicação
 
-A publicação para o [npm](https://www.npmjs.com/) é realizada automaticamente via GitHub Actions quando um release é criado. Configure o segredo `NPM_TOKEN` no repositório para que o fluxo de publicação funcione.
+A publicação para o [npm](https://www.npmjs.com/) é realizada automaticamente pelo GitHub Actions sempre que uma tag no formato `v*` é enviada. Crie e envie uma tag com a versão desejada:
+
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+O workflow utiliza essa tag para definir a versão do pacote antes de executar `npm publish`. Configure o segredo `NPM_TOKEN` no repositório para que o fluxo de publicação funcione.
