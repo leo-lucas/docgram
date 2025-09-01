@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
 import path from 'node:path';
-import { rmSync, readFileSync } from 'node:fs';
+import { rmSync, readFileSync, symlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 import { DiagramService } from '../dist/core/usecases/generateDiagram.js';
@@ -43,10 +43,20 @@ test('docs command writes README with diagram', () => {
   const dir = path.join('fixtures');
   const readme = path.join(dir, 'README.md');
   rmSync(readme, { force: true });
-  const result = spawnSync('node', ['dist/index.js', 'docs', dir]);
+  const result = spawnSync('node', ['dist/cli.js', 'docs', dir]);
   assert.equal(result.status, 0);
   const content = readFileSync(readme, 'utf8');
   assert.ok(content.includes(`# ${path.basename(dir)}`));
   assert.ok(content.includes('```mermaid'));
   rmSync(readme);
+});
+
+test('CLI runs correctly when invoked via symlink', () => {
+  const symlink = path.join('dist', 'cli-link.js');
+  rmSync(symlink, { force: true });
+  symlinkSync(path.resolve('dist', 'cli.js'), symlink);
+  const result = spawnSync('node', [symlink, '--help'], { encoding: 'utf8' });
+  assert.equal(result.status, 0);
+  assert.ok(result.stdout.includes('Usage: docgram'));
+  rmSync(symlink);
 });
