@@ -4,14 +4,14 @@
   "description": "Generate diagrams from source code",
   "main": "dist/index.js",
   "bin": {
-    "docgram": "dist/index.js"
+    "docgram": "dist/cli.js"
   },
   "files": ["dist"],
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "diagram": "npm run build && node dist/index.js diagram",
-    "docs": "npm run build && node dist/index.js docs",
+    "diagram": "npm run build && node dist/cli.js diagram",
+    "docs": "npm run build && node dist/cli.js docs",
     "test": "npm run build && node --test",
     "prepublishOnly": "npm run build"
   },
