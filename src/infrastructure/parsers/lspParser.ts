@@ -212,15 +212,10 @@ export class LspParser implements Parser {
 
     const params: ParameterInfo[] = [];
     for (const p of parts) {
-      if (p.startsWith('{') && /}:\s*[^,]+/.test(p)) {
+      if (p.startsWith('{')) {
         const typeMatch = p.match(/}:\s*([^,]+)/);
-        const type = typeMatch ? typeMatch[1].trim() : 'any';
-        const namesPart = p.slice(1, p.indexOf('}:'));
-        namesPart
-          .split(',')
-          .map(n => n.trim())
-          .filter(Boolean)
-          .forEach(name => params.push({ name, type }));
+        const type = typeMatch ? typeMatch[1].trim() : 'object';
+        params.push({ name: 'options', type });
       } else {
         const pm = p.match(/([A-Za-z0-9_]+)\s*:\s*([^,]+)/);
         if (pm) params.push({ name: pm[1], type: pm[2].trim() });

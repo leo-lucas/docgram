@@ -65,12 +65,10 @@ export class TypeScriptParser implements Parser {
           cons.getParameters().forEach(prm => {
             const nameNode = prm.getNameNode();
             if (nameNode && Node.isObjectBindingPattern(nameNode)) {
-              nameNode.getElements().forEach(el => {
-                const t = el.getType();
-                paramEntries.push({
-                  info: { name: el.getName(), type: this.formatType(t) },
-                  type: t,
-                });
+              const t = prm.getType();
+              paramEntries.push({
+                info: { name: 'options', type: this.formatType(t) },
+                type: t,
               });
             } else {
               const t = prm.getType();

@@ -11,6 +11,7 @@ import { MermaidDiagramGenerator } from '../dist/infrastructure/diagram/mermaidG
 const sample = path.join('fixtures', 'sample.ts');
 const worker = path.join('fixtures', 'worker.ts');
 const destruct = path.join('fixtures', 'destruct.ts');
+const destructUntyped = path.join('fixtures', 'destructUntyped.ts');
 
 test('generates mermaid diagram with relations and stereotypes', async () => {
   const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
@@ -43,8 +44,15 @@ test('prints object for inline property types', async () => {
 test('diagram omits parameter destructuring in constructors', async () => {
   const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
   const diagram = await service.generateFromPaths([destruct]);
-  assert.ok(diagram.includes('+Config(foo: string, bar: number)'));
-  assert.ok(!diagram.includes('{ foo, bar }'));
+  assert.ok(diagram.includes('+Config(options: Options)'));
+  assert.ok(!diagram.includes('+Config(foo:'));
+});
+
+test('diagram falls back to object for untyped destructured constructors', async () => {
+  const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
+  const diagram = await service.generateFromPaths([destructUntyped]);
+  assert.ok(diagram.includes('+ConfigUntyped(options: object)'));
+  assert.ok(!diagram.includes('+ConfigUntyped(foo:'));
 });
 
 test('docs command writes README with diagram', () => {
