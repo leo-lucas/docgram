@@ -97,7 +97,6 @@ test('LSP parser handles object destructuring in constructors', async () => {
   assert.ok(config);
   assert.ok(config.members.some(m => m.kind === 'constructor' && m.name === 'constructor'));
   const ctor = config.members.find(m => m.kind === 'constructor');
-  assert.ok(ctor?.parameters?.some(p => p.name === 'foo'));
-  assert.ok(ctor?.parameters?.some(p => p.name === 'bar'));
+  assert.deepEqual(ctor?.parameters?.map(p => p.name).sort(), ['bar', 'foo']);
 });
 

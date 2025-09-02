@@ -10,6 +10,7 @@ import { MermaidDiagramGenerator } from '../dist/infrastructure/diagram/mermaidG
 
 const sample = path.join('fixtures', 'sample.ts');
 const worker = path.join('fixtures', 'worker.ts');
+const destruct = path.join('fixtures', 'destruct.ts');
 
 test('generates mermaid diagram with relations and stereotypes', async () => {
   const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
@@ -37,6 +38,13 @@ test('prints object for inline property types', async () => {
   const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
   const diagram = await service.generateFromPaths([worker]);
   assert.ok(diagram.includes('test*: object'));
+});
+
+test('diagram omits parameter destructuring in constructors', async () => {
+  const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
+  const diagram = await service.generateFromPaths([destruct]);
+  assert.ok(diagram.includes('+Config(foo: string, bar: number)'));
+  assert.ok(!diagram.includes('{ foo, bar }'));
 });
 
 test('docs command writes README with diagram', () => {
