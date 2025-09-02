@@ -34,7 +34,7 @@ test('LSP parser builds entities from document symbols', async () => {
 test('LSP parser collects files from directories', async () => {
   const parser = new LspParser(new FakeClient());
   const entities = await parser.parse(['fixtures']);
-  assert.equal(entities.length, 2);
+  assert.equal(entities.length, 4);
   assert.equal(entities[0].name, 'Foo');
   assert.ok(entities.every(e => e.namespace === 'fixtures'));
 });
@@ -86,5 +86,27 @@ test('LSP parser falls back to object for inline property types', async () => {
   assert.ok(worker);
   assert.ok(worker.members.some(m => m.name === 'test' && m.type === 'object'));
   assert.equal(worker.namespace, 'fixtures');
+});
+
+
+test('LSP parser handles object destructuring in constructors', async () => {
+  const client = new StdioLanguageClient(path.join('node_modules', '.bin', 'typescript-language-server'), ['--stdio']);
+  const parser = new LspParser(client);
+  const entities = await parser.parse(['fixtures/destruct.ts']);
+  const config = entities.find(e => e.name === 'Config');
+  assert.ok(config);
+  assert.ok(config.members.some(m => m.kind === 'constructor' && m.name === 'constructor'));
+  const ctor = config.members.find(m => m.kind === 'constructor');
+  assert.deepEqual(ctor?.parameters, [{ name: 'options', type: 'Options' }]);
+});
+
+test('LSP parser falls back to object for untyped destructuring in constructors', async () => {
+  const client = new StdioLanguageClient(path.join('node_modules', '.bin', 'typescript-language-server'), ['--stdio']);
+  const parser = new LspParser(client);
+  const entities = await parser.parse(['fixtures/destructUntyped.ts']);
+  const config = entities.find(e => e.name === 'ConfigUntyped');
+  assert.ok(config);
+  const ctor = config.members.find(m => m.kind === 'constructor');
+  assert.deepEqual(ctor?.parameters, [{ name: 'options', type: 'object' }]);
 });
 

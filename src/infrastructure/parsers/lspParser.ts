@@ -128,7 +128,10 @@ export class LspParser implements Parser {
           };
           entity.relations.push(rel);
         }
-      } else if (child.kind === SymbolKind.Constructor) {
+      } else if (
+        child.kind === SymbolKind.Constructor ||
+        (child.kind === SymbolKind.Method && /^constructor\b/.test(line))
+      ) {
         const parameters = this.parseParams(line);
         members.push({ name: 'constructor', kind: 'constructor', visibility, parameters, isStatic });
         parameters.forEach(prm => {
@@ -191,16 +194,34 @@ export class LspParser implements Parser {
   private parseParams(line: string): ParameterInfo[] {
     const m = line.match(/\(([^)]*)\)/);
     if (!m) return [];
-    return m[1]
-      .split(',')
-      .map(p => p.trim())
-      .filter(Boolean)
-      .map(p => {
+    const inside = m[1];
+    const parts: string[] = [];
+    let depth = 0;
+    let current = '';
+    for (const ch of inside) {
+      if (ch === ',' && depth === 0) {
+        parts.push(current.trim());
+        current = '';
+        continue;
+      }
+      if (ch === '{') depth++;
+      else if (ch === '}') depth--;
+      current += ch;
+    }
+    if (current.trim()) parts.push(current.trim());
+
+    const params: ParameterInfo[] = [];
+    for (const p of parts) {
+      if (p.startsWith('{')) {
+        const typeMatch = p.match(/}:\s*([^,]+)/);
+        const type = typeMatch ? typeMatch[1].trim() : 'object';
+        params.push({ name: 'options', type });
+      } else {
         const pm = p.match(/([A-Za-z0-9_]+)\s*:\s*([^,]+)/);
-        if (!pm) return null;
-        return { name: pm[1], type: pm[2].trim() } as ParameterInfo;
-      })
-      .filter((p): p is ParameterInfo => !!p);
+        if (pm) params.push({ name: pm[1], type: pm[2].trim() });
+      }
+    }
+    return params;
   }
 
   private parseReturn(line: string): string | undefined {
