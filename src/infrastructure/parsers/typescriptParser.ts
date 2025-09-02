@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { Project, SyntaxKind, Type } from 'ts-morph';
+import { Project, SyntaxKind, Type, Node } from 'ts-morph';
 import {
   EntityInfo,
   Parser,
@@ -61,30 +61,44 @@ export class TypeScriptParser implements Parser {
           }
         });
         c.getConstructors().forEach(cons => {
-          const parameters: ParameterInfo[] = cons.getParameters().map(prm => ({
-            name: prm.getName(),
-            type: this.formatType(prm.getType()),
-          }));
+          const paramEntries: { info: ParameterInfo; type: Type }[] = [];
+          cons.getParameters().forEach(prm => {
+            const nameNode = prm.getNameNode();
+            if (nameNode && Node.isObjectBindingPattern(nameNode)) {
+              nameNode.getElements().forEach(el => {
+                const t = el.getType();
+                paramEntries.push({
+                  info: { name: el.getName(), type: this.formatType(t) },
+                  type: t,
+                });
+              });
+            } else {
+              const t = prm.getType();
+              paramEntries.push({
+                info: { name: prm.getName(), type: this.formatType(t) },
+                type: t,
+              });
+            }
+          });
           entity.members.push({
             name: 'constructor',
             kind: 'constructor',
             visibility: cons.getScope() ?? 'public',
-            parameters,
+            parameters: paramEntries.map(p => p.info),
           });
-          cons.getParameters().forEach(prm => {
-            const t = prm.getType();
-            const relType = this.isCollection(t)
-              ? t.getArrayElementType() || t.getTypeArguments()[0]
-              : t;
+          paramEntries.forEach(({ info, type }) => {
+            const relType = this.isCollection(type)
+              ? type.getArrayElementType() || type.getTypeArguments()[0]
+              : type;
             const symbol = relType.getAliasSymbol() ?? relType.getSymbol();
             const typeName = symbol?.getName();
             if (typeName && !typeName.startsWith('__')) {
               const rel: RelationInfo = {
                 type: 'dependency',
                 target: typeName,
-                label: prm.getName(),
+                label: info.name,
                 sourceCardinality: '1',
-                targetCardinality: this.isCollection(t) ? '0..*' : '1',
+                targetCardinality: this.isCollection(type) ? '0..*' : '1',
               };
               entity.relations.push(rel);
             }
