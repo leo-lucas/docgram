@@ -21,3 +21,21 @@ test('TypeScript parser falls back to object for untyped destructuring', async (
   const ctor = config?.members.find(m => m.kind === 'constructor');
   expect(ctor?.parameters).toEqual([{ name: 'options', type: 'object' }]);
 });
+
+test('TypeScript parser handles object destructuring in methods', async () => {
+  expect.hasAssertions();
+  const parser = new TypeScriptParser();
+  const entities = await parser.parse(['fixtures/destruct.ts']);
+  const config = entities.find(e => e.name === 'Config');
+  const method = config?.members.find(m => m.kind === 'method' && m.name === 'update');
+  expect(method?.parameters).toEqual([{ name: 'options', type: 'Options' }]);
+});
+
+test('TypeScript parser falls back to object for untyped destructured methods', async () => {
+  expect.hasAssertions();
+  const parser = new TypeScriptParser();
+  const entities = await parser.parse(['fixtures/destructUntyped.ts']);
+  const config = entities.find(e => e.name === 'ConfigUntyped');
+  const method = config?.members.find(m => m.kind === 'method' && m.name === 'update');
+  expect(method?.parameters).toEqual([{ name: 'options', type: 'object' }]);
+});
