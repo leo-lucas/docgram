@@ -3,9 +3,9 @@ import path from 'node:path';
 import { rmSync, readFileSync, symlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
-import { DiagramService } from '../dist/core/usecases/generateDiagram.js';
-import { TypeScriptParser } from '../dist/infrastructure/parsers/typescriptParser.js';
-import { MermaidDiagramGenerator } from '../dist/infrastructure/diagram/mermaidGenerator.js';
+import { DiagramService } from '../src/core/usecases/generateDiagram';
+import { TypeScriptParser } from '../src/infrastructure/parsers/typescriptParser';
+import { MermaidDiagramGenerator } from '../src/infrastructure/diagram/mermaidGenerator';
 
 const sample = path.join('fixtures', 'sample.ts');
 const worker = path.join('fixtures', 'worker.ts');
@@ -63,7 +63,7 @@ test('docs command writes README with diagram', () => {
   const dir = path.join('fixtures');
   const readme = path.join(dir, 'README.md');
   rmSync(readme, { force: true });
-  const result = spawnSync('node', ['dist/cli.js', 'docs', dir]);
+  const result = spawnSync('node', ['--loader', 'ts-node/esm', path.join('src', 'cli.ts'), 'docs', dir]);
   expect(result.status).toBe(0);
   const content = readFileSync(readme, 'utf8');
   expect(content).toContain(`# ${path.basename(dir)}`);
@@ -73,10 +73,10 @@ test('docs command writes README with diagram', () => {
 
 test('CLI runs correctly when invoked via symlink', () => {
   expect.hasAssertions();
-  const symlink = path.join('dist', 'cli-link.js');
+  const symlink = path.join('src', 'cli-link.ts');
   rmSync(symlink, { force: true });
-  symlinkSync(path.resolve('dist', 'cli.js'), symlink);
-  const result = spawnSync('node', [symlink, '--help'], { encoding: 'utf8' });
+  symlinkSync(path.resolve('src', 'cli.ts'), symlink);
+  const result = spawnSync('node', ['--loader', 'ts-node/esm', symlink, '--help'], { encoding: 'utf8' });
   expect(result.status).toBe(0);
   expect(result.stdout).toContain('Usage: docgram');
   rmSync(symlink);
