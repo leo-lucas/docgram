@@ -6,7 +6,7 @@
   "bin": {
     "docgram": "dist/cli.js"
   },
-  "files": ["dist"],
+  "files": ["dist", "README.md"],
   "type": "module",
   "scripts": {
     "build": "tsc",
