@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { Project, SyntaxKind, Type, Node } from 'ts-morph';
 import {
   EntityInfo,
@@ -7,11 +5,11 @@ import {
   ParameterInfo,
   RelationInfo,
 } from '../../core/model.js';
+import { collectFiles, namespaceOf } from './utils.js';
 
 export class TypeScriptParser implements Parser {
   async parse(paths: string[]): Promise<EntityInfo[]> {
-    const files: string[] = [];
-    for (const p of paths) this.collectFiles(p, files);
+    const files = await collectFiles(paths);
 
     const project = new Project();
     project.addSourceFilesAtPaths(files);
@@ -19,7 +17,7 @@ export class TypeScriptParser implements Parser {
     const entities: EntityInfo[] = [];
 
     for (const sourceFile of project.getSourceFiles()) {
-      const namespace = this.namespaceOf(sourceFile.getFilePath());
+      const namespace = namespaceOf(sourceFile.getFilePath());
       // classes
       for (const c of sourceFile.getClasses()) {
         const entity: EntityInfo = {
@@ -317,17 +315,6 @@ export class TypeScriptParser implements Parser {
     return entities;
   }
 
-  private collectFiles(target: string, files: string[]) {
-    const stat = fs.statSync(target);
-    if (stat.isDirectory()) {
-      for (const entry of fs.readdirSync(target)) {
-        this.collectFiles(path.join(target, entry), files);
-      }
-    } else if (target.endsWith('.ts')) {
-      files.push(target);
-    }
-  }
-
   private isCollection(t: Type): boolean {
     const text = t.getText();
     return (
@@ -347,10 +334,5 @@ export class TypeScriptParser implements Parser {
     const symName = t.getSymbol()?.getName();
     const raw = symName && !symName.startsWith('__') ? symName : t.getText();
     return raw.replace(/import\([^\)]+\)\./g, '');
-  }
-
-  private namespaceOf(file: string): string | undefined {
-    const dir = path.relative(process.cwd(), path.dirname(file));
-    return dir ? dir.split(path.sep).join('.') : undefined;
   }
 }

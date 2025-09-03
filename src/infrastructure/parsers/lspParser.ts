@@ -1,7 +1,7 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import { promises as fs } from 'node:fs';
 import { Parser, EntityInfo, MemberInfo, LanguageClient, ParameterInfo, RelationInfo } from '../../core/model.js';
 import { DocumentSymbol, SymbolKind } from 'vscode-languageserver-protocol';
+import { collectFiles, namespaceOf } from './utils.js';
 
 export class LspParser implements Parser {
   constructor(private client: LanguageClient) {}
@@ -9,18 +9,20 @@ export class LspParser implements Parser {
   async parse(paths: string[]): Promise<EntityInfo[]> {
     await this.client.initialize(process.cwd());
     const entities: EntityInfo[] = [];
-    const files: string[] = [];
-    for (const p of paths) this.collectFiles(p, files);
+    const files = await collectFiles(paths);
 
     for (const file of files) {
-      const namespace = this.namespaceOf(file);
-      const content = fs.readFileSync(file, 'utf8');
-      const lines = content.split(/\r?\n/);
-      const symbols = await this.client.documentSymbols(file, content);
-      for (const sym of symbols) {
-
-        const ent = this.symbolToEntity(sym, lines, namespace);
-        if (ent) entities.push(ent);
+      try {
+        const namespace = namespaceOf(file);
+        const content = await fs.readFile(file, 'utf8');
+        const lines = content.split(/\r?\n/);
+        const symbols = await this.client.documentSymbols(file, content);
+        for (const sym of symbols) {
+          const ent = this.symbolToEntity(sym, lines, namespace);
+          if (ent) entities.push(ent);
+        }
+      } catch (err) {
+        console.error(`Failed to parse ${file}:`, err);
       }
     }
 
@@ -263,20 +265,4 @@ export class LspParser implements Parser {
     return [];
   }
 
-  private collectFiles(target: string, files: string[]) {
-    if (!fs.existsSync(target)) return;
-    const stat = fs.statSync(target);
-    if (stat.isDirectory()) {
-      for (const entry of fs.readdirSync(target)) {
-        this.collectFiles(path.join(target, entry), files);
-      }
-    } else if (target.endsWith('.ts')) {
-      files.push(target);
-    }
-  }
-
-  private namespaceOf(file: string): string | undefined {
-    const dir = path.relative(process.cwd(), path.dirname(file));
-    return dir ? dir.split(path.sep).join('.') : undefined;
-  }
 }
