@@ -5,4 +5,9 @@ export class ConfigUntyped {
     this.foo = foo;
     this.bar = bar;
   }
+
+  update({ foo, bar }): void {
+    this.foo = foo;
+    this.bar = bar;
+  }
 }

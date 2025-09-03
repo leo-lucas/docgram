@@ -10,4 +10,9 @@ export class Config {
     this.foo = foo;
     this.bar = bar;
   }
+
+  update({ foo, bar }: Options): void {
+    this.foo = foo;
+    this.bar = bar;
+  }
 }

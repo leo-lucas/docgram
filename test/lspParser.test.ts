@@ -129,3 +129,25 @@ test('LSP parser falls back to object for untyped destructuring in constructors'
   expect(ctor?.parameters).toEqual([{ name: 'options', type: 'object' }]);
 });
 
+test('LSP parser handles object destructuring in methods', async () => {
+  expect.hasAssertions();
+  const client = new StdioLanguageClient(path.join('node_modules', '.bin', 'typescript-language-server'), ['--stdio']);
+  const parser = new LspParser(client);
+  const entities = await parser.parse(['fixtures/destruct.ts']);
+  const config = entities.find(e => e.name === 'Config');
+  expect(config).toBeDefined();
+  const method = config?.members.find(m => m.kind === 'method' && m.name === 'update');
+  expect(method?.parameters).toEqual([{ name: 'options', type: 'Options' }]);
+});
+
+test('LSP parser falls back to object for untyped destructured methods', async () => {
+  expect.hasAssertions();
+  const client = new StdioLanguageClient(path.join('node_modules', '.bin', 'typescript-language-server'), ['--stdio']);
+  const parser = new LspParser(client);
+  const entities = await parser.parse(['fixtures/destructUntyped.ts']);
+  const config = entities.find(e => e.name === 'ConfigUntyped');
+  expect(config).toBeDefined();
+  const method = config?.members.find(m => m.kind === 'method' && m.name === 'update');
+  expect(method?.parameters).toEqual([{ name: 'options', type: 'object' }]);
+});
+

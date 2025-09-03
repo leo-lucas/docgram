@@ -91,21 +91,18 @@ export class TypeScriptParser implements Parser {
 
   private classMethods(c: ClassDeclaration, entity: EntityInfo): void {
     c.getMethods().forEach(m => {
-      const parameters = m.getParameters().map(prm => ({
-        name: prm.getName(),
-        type: this.formatType(prm.getType()),
-      }));
+      const params = m.getParameters().map(prm => this.paramEntry(prm));
       entity.members.push({
         name: m.getName(),
         kind: 'method',
         visibility: m.getScope() ?? 'public',
         returnType: this.formatType(m.getReturnType()),
-        parameters,
+        parameters: params.map(p => p.info),
         isStatic: m.isStatic?.() ?? false,
         isAbstract: m.isAbstract?.() ?? false,
         typeParameters: m.getTypeParameters().map(tp => tp.getText()),
       });
-      m.getParameters().forEach(prm => this.addParamRelation(entity, prm.getType(), prm.getName()));
+      params.forEach(p => this.addParamRelation(entity, p.type, p.info.name));
       this.addReturnRelation(entity, m.getReturnType());
     });
   }
@@ -166,19 +163,17 @@ export class TypeScriptParser implements Parser {
 
   private interfaceMethods(i: InterfaceDeclaration, entity: EntityInfo): void {
     i.getMethods().forEach(m => {
-      const parameters: ParameterInfo[] = m
-        .getParameters()
-        .map(prm => ({ name: prm.getName(), type: this.formatType(prm.getType()) }));
+      const params = m.getParameters().map(prm => this.paramEntry(prm));
       entity.members.push({
         name: m.getName(),
         kind: 'method',
         visibility: 'public',
         returnType: this.formatType(m.getReturnType()),
-        parameters,
+        parameters: params.map(p => p.info),
         isAbstract: true,
         typeParameters: m.getTypeParameters().map(tp => tp.getText()),
       });
-      m.getParameters().forEach(prm => this.addParamRelation(entity, prm.getType(), prm.getName()));
+      params.forEach(p => this.addParamRelation(entity, p.type, p.info.name));
       this.addReturnRelation(entity, m.getReturnType());
     });
   }

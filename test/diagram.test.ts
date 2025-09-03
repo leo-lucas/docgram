@@ -58,6 +58,22 @@ test('diagram falls back to object for untyped destructured constructors', async
   expect(diagram.includes('+ConfigUntyped(foo:')).toBe(false);
 });
 
+test('diagram omits parameter destructuring in methods', async () => {
+  expect.hasAssertions();
+  const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
+  const diagram = await service.generateFromPaths([destruct]);
+  expect(diagram).toContain('+update(options: Options): void');
+  expect(diagram.includes('+update(foo:')).toBe(false);
+});
+
+test('diagram falls back to object for untyped destructured methods', async () => {
+  expect.hasAssertions();
+  const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
+  const diagram = await service.generateFromPaths([destructUntyped]);
+  expect(diagram).toContain('+update(options: object): void');
+  expect(diagram.includes('+update(foo:')).toBe(false);
+});
+
 test('docs command writes README with diagram', () => {
   expect.hasAssertions();
   const dir = path.join('fixtures');
