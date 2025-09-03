@@ -1,5 +1,4 @@
-import { test } from 'node:test';
-import { strict as assert } from 'node:assert';
+import { test, expect } from '@jest/globals';
 import path from 'node:path';
 import { rmSync, readFileSync, symlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -14,65 +13,71 @@ const destruct = path.join('fixtures', 'destruct.ts');
 const destructUntyped = path.join('fixtures', 'destructUntyped.ts');
 
 test('generates mermaid diagram with relations and stereotypes', async () => {
+  expect.hasAssertions();
   const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
   const diagram = await service.generateFromPaths([sample]);
-  assert.ok(diagram.includes('classDiagram'));
+  expect(diagram).toContain('classDiagram');
 
-  assert.ok(diagram.includes('namespace fixtures'));
-  assert.ok(diagram.includes('<<interface>>'));
-  assert.ok(diagram.includes('Greeter <|.. Person'));
-  assert.ok(diagram.includes('Person <|-- Employee'));
-  assert.ok(diagram.includes('id*: number'));
-  assert.ok(diagram.includes('#age: number'));
-  assert.ok(diagram.includes('+Person(name: string, age: number, address: Address)'));
-  assert.ok(diagram.includes('+calculateSalary(multiplier: number): number'));
-    assert.ok(diagram.includes('+greet()*: void'));
-  assert.ok(diagram.includes('Person "1" *-- "1" Address : address'));
-  assert.ok(diagram.includes('Department "1" o-- "0..*" Employee : employees'));
-  assert.ok(diagram.includes('Employee "1" ..> "1" Department : dept'));
-  assert.ok(diagram.includes('class Repository~T~'));
-  assert.ok(diagram.includes('count$: number'));
-  assert.ok(diagram.includes('+reset$(): void'));
+  expect(diagram).toContain('namespace fixtures');
+  expect(diagram).toContain('<<interface>>');
+  expect(diagram).toContain('Greeter <|.. Person');
+  expect(diagram).toContain('Person <|-- Employee');
+  expect(diagram).toContain('id*: number');
+  expect(diagram).toContain('#age: number');
+  expect(diagram).toContain('+Person(name: string, age: number, address: Address)');
+  expect(diagram).toContain('+calculateSalary(multiplier: number): number');
+  expect(diagram).toContain('+greet()*: void');
+  expect(diagram).toContain('Person "1" *-- "1" Address : address');
+  expect(diagram).toContain('Department "1" o-- "0..*" Employee : employees');
+  expect(diagram).toContain('Employee "1" ..> "1" Department : dept');
+  expect(diagram).toContain('class Repository~T~');
+  expect(diagram).toContain('count$: number');
+  expect(diagram).toContain('+reset$(): void');
 });
 
 test('prints object for inline property types', async () => {
+  expect.hasAssertions();
   const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
   const diagram = await service.generateFromPaths([worker]);
-  assert.ok(diagram.includes('test*: object'));
+  expect(diagram).toContain('test*: object');
 });
 
 test('diagram omits parameter destructuring in constructors', async () => {
+  expect.hasAssertions();
   const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
   const diagram = await service.generateFromPaths([destruct]);
-  assert.ok(diagram.includes('+Config(options: Options)'));
-  assert.ok(!diagram.includes('+Config(foo:'));
+  expect(diagram).toContain('+Config(options: Options)');
+  expect(diagram.includes('+Config(foo:')).toBe(false);
 });
 
 test('diagram falls back to object for untyped destructured constructors', async () => {
+  expect.hasAssertions();
   const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
   const diagram = await service.generateFromPaths([destructUntyped]);
-  assert.ok(diagram.includes('+ConfigUntyped(options: object)'));
-  assert.ok(!diagram.includes('+ConfigUntyped(foo:'));
+  expect(diagram).toContain('+ConfigUntyped(options: object)');
+  expect(diagram.includes('+ConfigUntyped(foo:')).toBe(false);
 });
 
 test('docs command writes README with diagram', () => {
+  expect.hasAssertions();
   const dir = path.join('fixtures');
   const readme = path.join(dir, 'README.md');
   rmSync(readme, { force: true });
   const result = spawnSync('node', ['dist/cli.js', 'docs', dir]);
-  assert.equal(result.status, 0);
+  expect(result.status).toBe(0);
   const content = readFileSync(readme, 'utf8');
-  assert.ok(content.includes(`# ${path.basename(dir)}`));
-  assert.ok(content.includes('```mermaid'));
+  expect(content).toContain(`# ${path.basename(dir)}`);
+  expect(content).toContain('```mermaid');
   rmSync(readme);
 });
 
 test('CLI runs correctly when invoked via symlink', () => {
+  expect.hasAssertions();
   const symlink = path.join('dist', 'cli-link.js');
   rmSync(symlink, { force: true });
   symlinkSync(path.resolve('dist', 'cli.js'), symlink);
   const result = spawnSync('node', [symlink, '--help'], { encoding: 'utf8' });
-  assert.equal(result.status, 0);
-  assert.ok(result.stdout.includes('Usage: docgram'));
+  expect(result.status).toBe(0);
+  expect(result.stdout).toContain('Usage: docgram');
   rmSync(symlink);
 });
