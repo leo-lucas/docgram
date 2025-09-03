@@ -4,5 +4,6 @@
   "parserOptions": { "ecmaVersion": "latest", "sourceType": "module" },
   "plugins": ["@typescript-eslint"],
   "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
-  "ignorePatterns": ["dist"]
+  "rules": { "complexity": ["error", 5] },
+  "ignorePatterns": ["dist", "fixtures"]
 }

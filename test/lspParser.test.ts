@@ -8,7 +8,7 @@ import { LanguageClient } from '../src/core/model';
 jest.setTimeout(20000);
 class FakeClient implements LanguageClient {
   async initialize(): Promise<void> {}
-  async documentSymbols(_p: string, _c: string): Promise<DocumentSymbol[]> {
+  async documentSymbols(): Promise<DocumentSymbol[]> {
     return [
       {
         name: 'Foo',
