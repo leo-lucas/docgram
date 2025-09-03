@@ -1,5 +1,5 @@
 import { test, expect } from '@jest/globals';
-import { TypeScriptParser } from '../dist/infrastructure/parsers/typescriptParser.js';
+import { TypeScriptParser } from '../src/infrastructure/parsers/typescriptParser';
 
 test('TypeScript parser handles object destructuring in constructors', async () => {
   expect.hasAssertions();

@@ -1,23 +1,38 @@
-import { test, expect } from '@jest/globals';
-import { LspParser } from '../dist/infrastructure/parsers/lspParser.js';
-import { SymbolKind } from 'vscode-languageserver-types';
+import { test, expect, jest } from '@jest/globals';
+import { LspParser } from '../src/infrastructure/parsers/lspParser';
+import { SymbolKind, DocumentSymbol } from 'vscode-languageserver-types';
 import path from 'node:path';
-import { StdioLanguageClient } from '../dist/infrastructure/lsp/stdioClient.js';
+import { StdioLanguageClient } from '../src/infrastructure/lsp/stdioClient';
+import { LanguageClient } from '../src/core/model';
 
-class FakeClient {
-  async initialize() {}
-  async documentSymbols(_p, _c) {
-    return [{
-      name: 'Foo',
-      kind: SymbolKind.Class,
-      range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
-      children: [
-        { name: 'bar', kind: SymbolKind.Property, range: { start: { line: 1, character: 0 }, end: { line: 1, character: 0 } } },
-        { name: 'baz', kind: SymbolKind.Method, range: { start: { line: 2, character: 0 }, end: { line: 2, character: 0 } } },
-      ],
-    }];
+jest.setTimeout(20000);
+class FakeClient implements LanguageClient {
+  async initialize(): Promise<void> {}
+  async documentSymbols(): Promise<DocumentSymbol[]> {
+    return [
+      {
+        name: 'Foo',
+        kind: SymbolKind.Class,
+        range: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
+        selectionRange: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
+        children: [
+          {
+            name: 'bar',
+            kind: SymbolKind.Property,
+            range: { start: { line: 1, character: 0 }, end: { line: 1, character: 0 } },
+            selectionRange: { start: { line: 1, character: 0 }, end: { line: 1, character: 0 } },
+          },
+          {
+            name: 'baz',
+            kind: SymbolKind.Method,
+            range: { start: { line: 2, character: 0 }, end: { line: 2, character: 0 } },
+            selectionRange: { start: { line: 2, character: 0 }, end: { line: 2, character: 0 } },
+          },
+        ],
+      },
+    ];
   }
-  async shutdown() {}
+  async shutdown(): Promise<void> {}
 }
 
 test('LSP parser builds entities from document symbols', async () => {
