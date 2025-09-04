@@ -31,164 +31,191 @@ export class TypeScriptParser implements Parser {
 
   private parseFile(sourceFile: SourceFile, entities: EntityInfo[]): void {
     const namespace = namespaceOf(sourceFile.getFilePath());
-    sourceFile.getClasses().forEach(c => entities.push(this.parseClass(c, namespace)));
-    sourceFile.getInterfaces().forEach(i => entities.push(this.parseInterface(i, namespace)));
-    sourceFile.getEnums().forEach(e => entities.push(this.parseEnum(e, namespace)));
-    sourceFile.getTypeAliases().forEach(t => {
-      const ent = this.parseTypeAlias(t, namespace);
-      if (ent) entities.push(ent);
+    sourceFile.getClasses().forEach(classDecl =>
+      entities.push(this.parseClass(classDecl, namespace))
+    );
+    sourceFile.getInterfaces().forEach(interfaceDecl =>
+      entities.push(this.parseInterface(interfaceDecl, namespace))
+    );
+    sourceFile.getEnums().forEach(enumDecl =>
+      entities.push(this.parseEnum(enumDecl, namespace))
+    );
+    sourceFile.getTypeAliases().forEach(typeAliasDecl => {
+      const entity = this.parseTypeAlias(typeAliasDecl, namespace);
+      if (entity) entities.push(entity);
     });
   }
 
-  private parseClass(c: ClassDeclaration, namespace?: string): EntityInfo {
+  private parseClass(classDecl: ClassDeclaration, namespace?: string): EntityInfo {
     const entity: EntityInfo = {
-      name: c.getName() ?? 'Anonymous',
+      name: classDecl.getName() ?? 'Anonymous',
       kind: 'class',
-      isAbstract: c.isAbstract(),
-      typeParameters: c.getTypeParameters().map(tp => tp.getText()),
-      extends: c.getExtends()?.getExpression().getText()
-        ? [c.getExtends()!.getExpression().getText()]
+      isAbstract: classDecl.isAbstract(),
+      typeParameters: classDecl.getTypeParameters().map(tp => tp.getText()),
+      extends: classDecl.getExtends()?.getExpression().getText()
+        ? [classDecl.getExtends()!.getExpression().getText()]
         : [],
-      implements: c.getImplements().map(i => i.getExpression().getText()),
+      implements: classDecl.getImplements().map(impl => impl.getExpression().getText()),
       namespace,
       members: [],
       relations: [],
     };
-    this.classProperties(c, entity);
-    this.classConstructors(c, entity);
-    this.classMethods(c, entity);
-    this.classAccessors(c, entity);
+    this.classProperties(classDecl, entity);
+    this.classConstructors(classDecl, entity);
+    this.classMethods(classDecl, entity);
+    this.classAccessors(classDecl, entity);
     return entity;
   }
 
-  private classProperties(c: ClassDeclaration, entity: EntityInfo): void {
-    c.getProperties().forEach(p => {
-      const type = p.getType();
+  private classProperties(classDecl: ClassDeclaration, entity: EntityInfo): void {
+    classDecl.getProperties().forEach(propertyDecl => {
+      const propertyType = propertyDecl.getType();
       entity.members.push({
-        name: p.getName(),
+        name: propertyDecl.getName(),
         kind: 'property',
-        visibility: p.getScope() ?? 'public',
-        type: this.formatType(type),
-        isStatic: p.isStatic?.() ?? false,
-        isAbstract: p.isAbstract?.() ?? false,
+        visibility: propertyDecl.getScope() ?? 'public',
+        type: this.formatType(propertyType),
+        isStatic: propertyDecl.isStatic?.() ?? false,
+        isAbstract: propertyDecl.isAbstract?.() ?? false,
       });
-      this.addFieldRelation(entity, type, p.getName());
+      this.addFieldRelation(entity, propertyType, propertyDecl.getName());
     });
   }
 
-  private classConstructors(c: ClassDeclaration, entity: EntityInfo): void {
-    c.getConstructors().forEach(cons => {
-      const params = cons.getParameters().map(p => this.paramEntry(p));
+  private classConstructors(classDecl: ClassDeclaration, entity: EntityInfo): void {
+    classDecl.getConstructors().forEach(constructorDecl => {
+      const parameters = constructorDecl
+        .getParameters()
+        .map(parameterDecl => this.paramEntry(parameterDecl));
       entity.members.push({
         name: 'constructor',
         kind: 'constructor',
-        visibility: cons.getScope() ?? 'public',
-        parameters: params.map(p => p.info),
+        visibility: constructorDecl.getScope() ?? 'public',
+        parameters: parameters.map(param => param.info),
       });
-      params.forEach(p => this.addParamRelation(entity, p.type, p.info.name));
+      parameters.forEach(param =>
+        this.addParamRelation(entity, param.type, param.info.name)
+      );
     });
   }
 
-  private classMethods(c: ClassDeclaration, entity: EntityInfo): void {
-    c.getMethods().forEach(m => {
-      const params = m.getParameters().map(prm => this.paramEntry(prm));
+  private classMethods(classDecl: ClassDeclaration, entity: EntityInfo): void {
+    classDecl.getMethods().forEach(methodDecl => {
+      const parameters = methodDecl
+        .getParameters()
+        .map(parameterDecl => this.paramEntry(parameterDecl));
       entity.members.push({
-        name: m.getName(),
+        name: methodDecl.getName(),
         kind: 'method',
-        visibility: m.getScope() ?? 'public',
-        returnType: this.formatType(m.getReturnType()),
-        parameters: params.map(p => p.info),
-        isStatic: m.isStatic?.() ?? false,
-        isAbstract: m.isAbstract?.() ?? false,
-        typeParameters: m.getTypeParameters().map(tp => tp.getText()),
+        visibility: methodDecl.getScope() ?? 'public',
+        returnType: this.formatType(methodDecl.getReturnType()),
+        parameters: parameters.map(param => param.info),
+        isStatic: methodDecl.isStatic?.() ?? false,
+        isAbstract: methodDecl.isAbstract?.() ?? false,
+        typeParameters: methodDecl.getTypeParameters().map(tp => tp.getText()),
       });
-      params.forEach(p => this.addParamRelation(entity, p.type, p.info.name));
-      this.addReturnRelation(entity, m.getReturnType());
+      parameters.forEach(param =>
+        this.addParamRelation(entity, param.type, param.info.name)
+      );
+      this.addReturnRelation(entity, methodDecl.getReturnType());
     });
   }
 
-  private classAccessors(c: ClassDeclaration, entity: EntityInfo): void {
-    c.getGetAccessors().forEach(g => {
+  private classAccessors(classDecl: ClassDeclaration, entity: EntityInfo): void {
+    classDecl.getGetAccessors().forEach(getter => {
       entity.members.push({
-        name: g.getName(),
+        name: getter.getName(),
         kind: 'getter',
-        visibility: g.getScope() ?? 'public',
-        returnType: this.formatType(g.getReturnType()),
-        isStatic: g.isStatic?.() ?? false,
+        visibility: getter.getScope() ?? 'public',
+        returnType: this.formatType(getter.getReturnType()),
+        isStatic: getter.isStatic?.() ?? false,
       });
     });
-    c.getSetAccessors().forEach(s => {
-      const parameters: ParameterInfo[] = s.getParameters().map(prm => ({
-        name: prm.getName(),
-        type: this.formatType(prm.getType()),
+    classDecl.getSetAccessors().forEach(setter => {
+      const parameters: ParameterInfo[] = setter.getParameters().map(paramDecl => ({
+        name: paramDecl.getName(),
+        type: this.formatType(paramDecl.getType()),
       }));
       entity.members.push({
-        name: s.getName(),
+        name: setter.getName(),
         kind: 'setter',
-        visibility: s.getScope() ?? 'public',
+        visibility: setter.getScope() ?? 'public',
         parameters,
-        isStatic: s.isStatic?.() ?? false,
+        isStatic: setter.isStatic?.() ?? false,
       });
     });
   }
 
-  private parseInterface(i: InterfaceDeclaration, namespace?: string): EntityInfo {
+  private parseInterface(
+    interfaceDecl: InterfaceDeclaration,
+    namespace?: string
+  ): EntityInfo {
     const entity: EntityInfo = {
-      name: i.getName() ?? 'Anonymous',
+      name: interfaceDecl.getName() ?? 'Anonymous',
       kind: 'interface',
-      typeParameters: i.getTypeParameters().map(tp => tp.getText()),
-      extends: i.getExtends().map(e => e.getExpression().getText()),
+      typeParameters: interfaceDecl.getTypeParameters().map(tp => tp.getText()),
+      extends: interfaceDecl.getExtends().map(ext => ext.getExpression().getText()),
       namespace,
       members: [],
       relations: [],
     };
-    this.interfaceProperties(i, entity);
-    this.interfaceMethods(i, entity);
+    this.interfaceProperties(interfaceDecl, entity);
+    this.interfaceMethods(interfaceDecl, entity);
     return entity;
   }
 
-  private interfaceProperties(i: InterfaceDeclaration, entity: EntityInfo): void {
-    i.getProperties().forEach(p => {
-      const type = p.getType();
+  private interfaceProperties(
+    interfaceDecl: InterfaceDeclaration,
+    entity: EntityInfo
+  ): void {
+    interfaceDecl.getProperties().forEach(propertyDecl => {
+      const propertyType = propertyDecl.getType();
       entity.members.push({
-        name: p.getName(),
+        name: propertyDecl.getName(),
         kind: 'property',
         visibility: 'public',
-        type: this.formatType(type),
+        type: this.formatType(propertyType),
         isAbstract: true,
       });
-      this.addFieldRelation(entity, type, p.getName());
+      this.addFieldRelation(entity, propertyType, propertyDecl.getName());
     });
   }
 
-  private interfaceMethods(i: InterfaceDeclaration, entity: EntityInfo): void {
-    i.getMethods().forEach(m => {
-      const params = m.getParameters().map(prm => this.paramEntry(prm));
+  private interfaceMethods(
+    interfaceDecl: InterfaceDeclaration,
+    entity: EntityInfo
+  ): void {
+    interfaceDecl.getMethods().forEach(methodDecl => {
+      const parameters = methodDecl
+        .getParameters()
+        .map(parameterDecl => this.paramEntry(parameterDecl));
       entity.members.push({
-        name: m.getName(),
+        name: methodDecl.getName(),
         kind: 'method',
         visibility: 'public',
-        returnType: this.formatType(m.getReturnType()),
-        parameters: params.map(p => p.info),
+        returnType: this.formatType(methodDecl.getReturnType()),
+        parameters: parameters.map(param => param.info),
         isAbstract: true,
-        typeParameters: m.getTypeParameters().map(tp => tp.getText()),
+        typeParameters: methodDecl.getTypeParameters().map(tp => tp.getText()),
       });
-      params.forEach(p => this.addParamRelation(entity, p.type, p.info.name));
-      this.addReturnRelation(entity, m.getReturnType());
+      parameters.forEach(param =>
+        this.addParamRelation(entity, param.type, param.info.name)
+      );
+      this.addReturnRelation(entity, methodDecl.getReturnType());
     });
   }
 
-  private parseEnum(e: EnumDeclaration, namespace?: string): EntityInfo {
+  private parseEnum(enumDecl: EnumDeclaration, namespace?: string): EntityInfo {
     const entity: EntityInfo = {
-      name: e.getName() ?? 'Anonymous',
+      name: enumDecl.getName() ?? 'Anonymous',
       kind: 'enum',
       namespace,
       members: [],
       relations: [],
     };
-    e.getMembers().forEach(m => {
+    enumDecl.getMembers().forEach(memberDecl => {
       entity.members.push({
-        name: m.getName() ?? '',
+        name: memberDecl.getName() ?? '',
         kind: 'property',
         visibility: 'public',
       });
@@ -196,59 +223,67 @@ export class TypeScriptParser implements Parser {
     return entity;
   }
 
-  private parseTypeAlias(t: TypeAliasDeclaration, namespace?: string): EntityInfo | null {
-    const node = t.getTypeNode();
+  private parseTypeAlias(
+    typeAliasDecl: TypeAliasDeclaration,
+    namespace?: string
+  ): EntityInfo | null {
+    const node = typeAliasDecl.getTypeNode();
     if (!node || node.getKind() !== SyntaxKind.TypeLiteral) return null;
     const entity: EntityInfo = {
-      name: t.getName(),
+      name: typeAliasDecl.getName(),
       kind: 'type',
       namespace,
       members: [],
       relations: [],
     };
-    t
+    typeAliasDecl
       .getType()
       .getProperties()
-      .forEach(sym => {
-        const decl = sym.getDeclarations()[0];
+      .forEach(symbol => {
+        const declaration = symbol.getDeclarations()[0];
         entity.members.push({
-          name: sym.getName(),
+          name: symbol.getName(),
           kind: 'property',
           visibility: 'public',
-          type: this.formatType(decl.getType()),
+          type: this.formatType(declaration.getType()),
         });
       });
     return entity;
   }
 
-  private paramEntry(prm: ParameterDeclaration): { info: ParameterInfo; type: Type } {
-    const nameNode = prm.getNameNode();
+  private paramEntry(
+    parameterDecl: ParameterDeclaration
+  ): { info: ParameterInfo; type: Type } {
+    const nameNode = parameterDecl.getNameNode();
     if (nameNode && Node.isObjectBindingPattern(nameNode)) {
-      const t = prm.getType();
-      return { info: { name: 'options', type: this.formatType(t) }, type: t };
+      const type = parameterDecl.getType();
+      return { info: { name: 'options', type: this.formatType(type) }, type };
     }
-    const t = prm.getType();
-    return { info: { name: prm.getName(), type: this.formatType(t) }, type: t };
+    const type = parameterDecl.getType();
+    return {
+      info: { name: parameterDecl.getName(), type: this.formatType(type) },
+      type,
+    };
   }
 
   private addFieldRelation(entity: EntityInfo, type: Type, label: string): void {
     const target = this.typeName(type);
     if (!target) return;
-    const isColl = this.isCollection(type);
-    let relType: RelationInfo['type'] = 'association';
-    let targetCard = '1';
-    if (isColl) {
-      relType = 'aggregation';
-      targetCard = '0..*';
+    const isCollection = this.isCollection(type);
+    let relationType: RelationInfo['type'] = 'association';
+    let targetCardinality = '1';
+    if (isCollection) {
+      relationType = 'aggregation';
+      targetCardinality = '0..*';
     } else if (entity.kind === 'class') {
-      relType = 'composition';
+      relationType = 'composition';
     }
     entity.relations.push({
-      type: relType,
+      type: relationType,
       target,
       label,
       sourceCardinality: '1',
-      targetCardinality: targetCard,
+      targetCardinality,
     });
   }
 
@@ -275,46 +310,53 @@ export class TypeScriptParser implements Parser {
     });
   }
 
-  private typeName(t: Type): string | undefined {
-    const relType = this.elementType(t);
-    const symbol = relType.getAliasSymbol() || relType.getSymbol();
+  private typeName(type: Type): string | undefined {
+    const relationType = this.elementType(type);
+    const symbol = relationType.getAliasSymbol() || relationType.getSymbol();
     if (!symbol) return undefined;
     const name = symbol.getName();
     return name.startsWith('__') ? undefined : name;
   }
 
-  private elementType(t: Type): Type {
-    if (!this.isCollection(t)) return t;
-    return t.getArrayElementType() || t.getTypeArguments()[0];
+  private elementType(type: Type): Type {
+    if (!this.isCollection(type)) return type;
+    return type.getArrayElementType() || type.getTypeArguments()[0];
   }
 
   private finalizeRelations(entities: EntityInfo[]): void {
-    const names = new Set(entities.map(e => e.name));
-    for (const e of entities) {
-      e.extends?.forEach(p => e.relations.push({ type: 'inheritance', target: p }));
-      e.implements?.forEach(i => e.relations.push({ type: 'implementation', target: i }));
-      e.relations = e.relations.filter(r => names.has(r.target));
+    const entityNames = new Set(entities.map(entity => entity.name));
+    for (const entity of entities) {
+      entity.extends?.forEach(parent =>
+        entity.relations.push({ type: 'inheritance', target: parent })
+      );
+      entity.implements?.forEach(implemented =>
+        entity.relations.push({ type: 'implementation', target: implemented })
+      );
+      entity.relations = entity.relations.filter(relation =>
+        entityNames.has(relation.target)
+      );
     }
   }
 
-  private isCollection(t: Type): boolean {
-    const text = t.getText();
+  private isCollection(type: Type): boolean {
+    const text = type.getText();
     return (
-      t.isArray() ||
+      type.isArray() ||
       /^Array<.+>$/i.test(text) ||
       /^Set<.+>$/i.test(text) ||
       /^Map<.+>$/i.test(text)
     );
   }
 
-  private formatType(t: Type): string {
-    if (/^\s*\{/.test(t.getText())) return 'object';
-    if (t.isArray()) {
-      const elem = t.getArrayElementType();
-      return `${this.formatType(elem!)}[]`;
-      }
-    const symName = t.getSymbol()?.getName();
-    const raw = symName && !symName.startsWith('__') ? symName : t.getText();
+  private formatType(type: Type): string {
+    if (/^\s*\{/.test(type.getText())) return 'object';
+    if (type.isArray()) {
+      const element = type.getArrayElementType();
+      return `${this.formatType(element!)}[]`;
+    }
+    const symbolName = type.getSymbol()?.getName();
+    const raw =
+      symbolName && !symbolName.startsWith('__') ? symbolName : type.getText();
     return raw.replace(/import\([^)]+\)\./g, '');
   }
 }

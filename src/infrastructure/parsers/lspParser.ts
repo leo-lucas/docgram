@@ -33,8 +33,8 @@ export class LspParser implements Parser {
       const lines = content.split(/\r?\n/);
       const symbols = await this.client.documentSymbols(file, content);
       return symbols
-        .map(sym => this.symbolToEntity(sym, lines, namespace))
-        .filter((e): e is EntityInfo => !!e);
+        .map(symbol => this.symbolToEntity(symbol, lines, namespace))
+        .filter((entity): entity is EntityInfo => !!entity);
     } catch (err) {
       console.error(`Failed to parse ${file}:`, err);
       return [];
@@ -42,37 +42,47 @@ export class LspParser implements Parser {
   }
 
   private finalizeRelations(entities: EntityInfo[]): void {
-    const names = new Set(entities.map(e => e.name));
-    for (const e of entities) {
-      e.extends?.forEach(p => e.relations.push({ type: 'inheritance', target: p }));
-      e.implements?.forEach(i => e.relations.push({ type: 'implementation', target: i }));
-      e.relations = e.relations.filter(r => names.has(r.target));
+    const entityNames = new Set(entities.map(entity => entity.name));
+    for (const entity of entities) {
+      entity.extends?.forEach(parent =>
+        entity.relations.push({ type: 'inheritance', target: parent })
+      );
+      entity.implements?.forEach(implemented =>
+        entity.relations.push({ type: 'implementation', target: implemented })
+      );
+      entity.relations = entity.relations.filter(relation =>
+        entityNames.has(relation.target)
+      );
     }
   }
 
   private symbolToEntity(
-    sym: DocumentSymbol,
+    symbol: DocumentSymbol,
     lines: string[],
     namespace: string | undefined
   ): EntityInfo | null {
-    switch (sym.kind) {
+    switch (symbol.kind) {
       case SymbolKind.Class:
-        return this.classEntity(sym, lines, namespace);
+        return this.classEntity(symbol, lines, namespace);
       case SymbolKind.Interface:
-        return this.interfaceEntity(sym, lines, namespace);
+        return this.interfaceEntity(symbol, lines, namespace);
       case SymbolKind.Enum:
-        return this.enumEntity(sym, lines, namespace);
+        return this.enumEntity(symbol, lines, namespace);
       case SymbolKind.Variable:
-        return this.typeEntity(sym, lines, namespace);
+        return this.typeEntity(symbol, lines, namespace);
       default:
         return null;
     }
   }
 
-  private classEntity(sym: DocumentSymbol, lines: string[], namespace?: string): EntityInfo {
-    const header = this.lineAt(lines, sym.range.start.line);
+  private classEntity(
+    symbol: DocumentSymbol,
+    lines: string[],
+    namespace?: string
+  ): EntityInfo {
+    const header = this.lineAt(lines, symbol.range.start.line);
     const entity: EntityInfo = {
-      name: sym.name,
+      name: symbol.name,
       kind: 'class',
       isAbstract: /\babstract\b/.test(header),
       typeParameters: this.parseGenerics(header),
@@ -82,18 +92,18 @@ export class LspParser implements Parser {
       members: [],
       relations: [],
     };
-    entity.members = this.membersFrom(sym, lines, entity);
+    entity.members = this.membersFrom(symbol, lines, entity);
     return entity;
   }
 
   private interfaceEntity(
-    sym: DocumentSymbol,
+    symbol: DocumentSymbol,
     lines: string[],
     namespace?: string
   ): EntityInfo {
-    const header = this.lineAt(lines, sym.range.start.line);
+    const header = this.lineAt(lines, symbol.range.start.line);
     const entity: EntityInfo = {
-      name: sym.name,
+      name: symbol.name,
       kind: 'interface',
       typeParameters: this.parseGenerics(header),
       extends: this.parseExtends(header),
@@ -101,46 +111,63 @@ export class LspParser implements Parser {
       members: [],
       relations: [],
     };
-    entity.members = this.membersFrom(sym, lines, entity);
+    entity.members = this.membersFrom(symbol, lines, entity);
     return entity;
   }
 
-  private enumEntity(sym: DocumentSymbol, lines: string[], namespace?: string): EntityInfo {
+  private enumEntity(
+    symbol: DocumentSymbol,
+    lines: string[],
+    namespace?: string
+  ): EntityInfo {
     const entity: EntityInfo = {
-      name: sym.name,
+      name: symbol.name,
       kind: 'enum',
       namespace,
       members: [],
       relations: [],
     };
-    entity.members = this.membersFrom(sym, lines, entity);
+    entity.members = this.membersFrom(symbol, lines, entity);
     return entity;
   }
 
-  private typeEntity(sym: DocumentSymbol, lines: string[], namespace?: string): EntityInfo {
+  private typeEntity(
+    symbol: DocumentSymbol,
+    lines: string[],
+    namespace?: string
+  ): EntityInfo {
     const entity: EntityInfo = {
-      name: sym.name,
+      name: symbol.name,
       kind: 'type',
       namespace,
       members: [],
       relations: [],
     };
     const members: MemberInfo[] = [];
-    for (let i = sym.range.start.line + 1; i < sym.range.end.line; i++) {
-      const line = this.lineAt(lines, i).trim();
-      const m = line.match(/^([A-Za-z0-9_]+)/);
-      if (!m) continue;
+    for (let lineNumber = symbol.range.start.line + 1; lineNumber < symbol.range.end.line; lineNumber++) {
+      const line = this.lineAt(lines, lineNumber).trim();
+      const memberMatch = line.match(/^([A-Za-z0-9_]+)/);
+      if (!memberMatch) continue;
       const typeMatch = line.match(/:\s*([A-Za-z0-9_.]+)/);
-      members.push({ name: m[1], kind: 'property', visibility: 'public', type: typeMatch?.[1] });
+      members.push({
+        name: memberMatch[1],
+        kind: 'property',
+        visibility: 'public',
+        type: typeMatch?.[1],
+      });
       if (typeMatch) entity.relations.push({ type: 'association', target: typeMatch[1] });
     }
     entity.members = members;
     return entity;
   }
 
-  private membersFrom(sym: DocumentSymbol, lines: string[], entity: EntityInfo): MemberInfo[] {
+  private membersFrom(
+    symbol: DocumentSymbol,
+    lines: string[],
+    entity: EntityInfo
+  ): MemberInfo[] {
     const members: MemberInfo[] = [];
-    for (const child of sym.children || []) {
+    for (const child of symbol.children || []) {
       const line = this.lineAt(lines, child.range.start.line).trim();
       const member = this.memberFrom(child, line, entity);
       if (member) members.push(member);
@@ -206,21 +233,21 @@ export class LspParser implements Parser {
   }
 
   private addFieldRelation(entity: EntityInfo, type: string, label: string): void {
-    const isColl = this.isCollection(type);
-    let relType: RelationInfo['type'] = 'association';
-    let targetCard = '1';
-    if (isColl) {
-      relType = 'aggregation';
-      targetCard = '0..*';
+    const isCollection = this.isCollection(type);
+    let relationType: RelationInfo['type'] = 'association';
+    let targetCardinality = '1';
+    if (isCollection) {
+      relationType = 'aggregation';
+      targetCardinality = '0..*';
     } else if (entity.kind === 'class') {
-      relType = 'composition';
+      relationType = 'composition';
     }
     entity.relations.push({
-      type: relType,
+      type: relationType,
       target: this.baseType(type),
       label,
       sourceCardinality: '1',
-      targetCardinality: targetCard,
+      targetCardinality,
     });
   }
 
@@ -260,28 +287,28 @@ export class LspParser implements Parser {
     return 'method';
   }
 
-  private addParamRelations(entity: EntityInfo, params: ParameterInfo[]): void {
-    params.forEach(prm => {
-      const rel: RelationInfo = {
+  private addParamRelations(entity: EntityInfo, parameters: ParameterInfo[]): void {
+    parameters.forEach(parameter => {
+      const relation: RelationInfo = {
         type: 'dependency',
-        target: this.baseType(prm.type),
-        label: prm.name,
+        target: this.baseType(parameter.type),
+        label: parameter.name,
         sourceCardinality: '1',
-        targetCardinality: this.isCollection(prm.type) ? '0..*' : '1',
+        targetCardinality: this.isCollection(parameter.type) ? '0..*' : '1',
       };
-      entity.relations.push(rel);
+      entity.relations.push(relation);
     });
   }
 
   private addReturnRelation(entity: EntityInfo, returnType?: string): void {
     if (!returnType) return;
-    const rel: RelationInfo = {
+    const relation: RelationInfo = {
       type: 'dependency',
       target: this.baseType(returnType),
       sourceCardinality: '1',
       targetCardinality: this.isCollection(returnType) ? '0..*' : '1',
     };
-    entity.relations.push(rel);
+    entity.relations.push(relation);
   }
 
   private lineAt(lines: string[], line: number): string {
@@ -291,38 +318,38 @@ export class LspParser implements Parser {
   private parseParams(line: string): ParameterInfo[] {
     const section = this.paramSection(line);
     if (!section) return [];
-    return this.splitParams(section).map(p => this.paramFrom(p));
+    return this.splitParams(section).map(param => this.paramFrom(param));
   }
 
   private paramSection(line: string): string | null {
-    const m = line.match(/\(([^)]*)\)/);
-    return m ? m[1] : null;
+    const matchResult = line.match(/\(([^)]*)\)/);
+    return matchResult ? matchResult[1] : null;
   }
 
   private splitParams(inside: string): string[] {
     const parts: string[] = [];
     let depth = 0;
     let current = '';
-    for (const ch of inside) {
-      if (this.isParamSeparator(ch, depth)) {
+    for (const char of inside) {
+      if (this.isParamSeparator(char, depth)) {
         parts.push(current.trim());
         current = '';
         continue;
       }
-      depth += this.deltaFor(ch);
-      current += ch;
+      depth += this.deltaFor(char);
+      current += char;
     }
     if (current.trim()) parts.push(current.trim());
     return parts;
   }
 
-  private isParamSeparator(ch: string, depth: number): boolean {
-    return ch === ',' && depth === 0;
+  private isParamSeparator(char: string, depth: number): boolean {
+    return char === ',' && depth === 0;
   }
 
-  private deltaFor(ch: string): number {
-    if (ch === '{') return 1;
-    if (ch === '}') return -1;
+  private deltaFor(char: string): number {
+    if (char === '{') return 1;
+    if (char === '}') return -1;
     return 0;
   }
 
@@ -332,26 +359,28 @@ export class LspParser implements Parser {
       const type = typeMatch ? typeMatch[1].trim() : 'object';
       return { name: 'options', type };
     }
-    const pm = part.match(/([A-Za-z0-9_]+)\s*:\s*([^,]+)/);
-    if (pm) return { name: pm[1], type: pm[2].trim() };
+    const paramMatch = part.match(/([A-Za-z0-9_]+)\s*:\s*([^,]+)/);
+    if (paramMatch) return { name: paramMatch[1], type: paramMatch[2].trim() };
     return { name: part, type: 'any' };
   }
 
   private parseReturn(line: string): string | undefined {
-    const m = line.match(/\)\s*:\s*([^{;]+)/);
-    return m ? m[1].trim() : undefined;
+    const matchResult = line.match(/\)\s*:\s*([^{;]+)/);
+    return matchResult ? matchResult[1].trim() : undefined;
   }
 
   private parsePropertyType(line: string): string | undefined {
-    const m = line.match(/:\s*([^;=]+)/);
-    if (!m) return undefined;
-    const type = m[1].trim();
+    const matchResult = line.match(/:\s*([^;=]+)/);
+    if (!matchResult) return undefined;
+    const type = matchResult[1].trim();
     return type === '{' ? 'object' : type;
   }
 
   private parseGenerics(header: string): string[] {
-    const m = header.match(/<([^>]+)>/);
-    return m ? m[1].split(',').map(s => s.trim()).filter(Boolean) : [];
+    const matchResult = header.match(/<([^>]+)>/);
+    return matchResult
+      ? matchResult[1].split(',').map(s => s.trim()).filter(Boolean)
+      : [];
   }
 
   private isCollection(type: string): boolean {
@@ -363,13 +392,17 @@ export class LspParser implements Parser {
   }
 
   private parseExtends(header: string): string[] {
-    const m = header.match(/extends\s+([^{]+)/);
-    return m ? m[1].split(',').map(s => s.trim()).filter(Boolean) : [];
+    const matchResult = header.match(/extends\s+([^{]+)/);
+    return matchResult
+      ? matchResult[1].split(',').map(s => s.trim()).filter(Boolean)
+      : [];
   }
 
   private parseImplements(header: string): string[] {
-    const m = header.match(/implements\s+([^{]+)/);
-    return m ? m[1].split(',').map(s => s.trim()).filter(Boolean) : [];
+    const matchResult = header.match(/implements\s+([^{]+)/);
+    return matchResult
+      ? matchResult[1].split(',').map(s => s.trim()).filter(Boolean)
+      : [];
   }
 }
 

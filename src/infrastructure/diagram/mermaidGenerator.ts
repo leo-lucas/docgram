@@ -20,104 +20,118 @@ function visibilitySymbol(v: MemberInfo['visibility']): string {
 export class MermaidDiagramGenerator implements DiagramGenerator {
   generate(entities: EntityInfo[]): string {
     const lines: string[] = ['classDiagram'];
-    const groups = this.groupByNamespace(entities);
-    for (const [ns, ents] of groups) {
-      this.emitNamespace(lines, ns, ents);
+    const namespaceGroups = this.groupByNamespace(entities);
+    for (const [namespace, entityList] of namespaceGroups) {
+      this.emitNamespace(lines, namespace, entityList);
     }
-    entities.forEach(e => this.emitRelations(lines, e));
+    entities.forEach(entity => this.emitRelations(lines, entity));
     return lines.join('\n');
   }
 
   private groupByNamespace(entities: EntityInfo[]): Map<string | undefined, EntityInfo[]> {
     const groups = new Map<string | undefined, EntityInfo[]>();
-    entities.forEach(e => {
-      const ns = e.namespace;
-      if (!groups.has(ns)) groups.set(ns, []);
-      groups.get(ns)!.push(e);
+    entities.forEach(entity => {
+      const namespace = entity.namespace;
+      if (!groups.has(namespace)) groups.set(namespace, []);
+      groups.get(namespace)!.push(entity);
     });
     return groups;
   }
 
   private emitNamespace(
     lines: string[],
-    ns: string | undefined,
-    ents: EntityInfo[]
+    namespace: string | undefined,
+    entities: EntityInfo[]
   ): void {
-    if (ns) {
-      lines.push(`  namespace ${ns} {`);
-      ents.forEach(e => this.emitEntity(lines, e, '    '));
+    if (namespace) {
+      lines.push(`  namespace ${namespace} {`);
+      entities.forEach(entity => this.emitEntity(lines, entity, '    '));
       lines.push('  }');
     } else {
-      ents.forEach(e => this.emitEntity(lines, e, '  '));
+      entities.forEach(entity => this.emitEntity(lines, entity, '  '));
     }
   }
 
-  private emitEntity(lines: string[], e: EntityInfo, indent: string): void {
-    const className = e.typeParameters?.length
-      ? `${e.name}~${e.typeParameters.join(', ')}~`
-      : e.name;
+  private emitEntity(lines: string[], entity: EntityInfo, indent: string): void {
+    const className = entity.typeParameters?.length
+      ? `${entity.name}~${entity.typeParameters.join(', ')}~`
+      : entity.name;
     lines.push(`${indent}class ${className} {`);
-    if (e.kind === 'interface') lines.push(`${indent}  <<interface>>`);
-    if (e.kind === 'enum') lines.push(`${indent}  <<enumeration>>`);
-    if (e.isAbstract) lines.push(`${indent}  <<abstract>>`);
-    e.members.forEach(m => lines.push(this.memberLine(m, indent, e.name)));
+    if (entity.kind === 'interface') lines.push(`${indent}  <<interface>>`);
+    if (entity.kind === 'enum') lines.push(`${indent}  <<enumeration>>`);
+    if (entity.isAbstract) lines.push(`${indent}  <<abstract>>`);
+    entity.members.forEach(member =>
+      lines.push(this.memberLine(member, indent, entity.name))
+    );
     lines.push(`${indent}}`);
   }
 
-  private memberLine(m: MemberInfo, indent: string, owner: string): string {
-    let name = m.name;
-    if (m.typeParameters?.length) name += `~${m.typeParameters.join(', ')}~`;
-    const symbol = visibilitySymbol(m.visibility);
-    const staticMark = m.isStatic ? '$' : '';
-    if (m.kind === 'property') return this.propertyLine(m, indent, symbol, staticMark, name);
-    if (m.kind === 'constructor') return this.ctorLine(m, indent, symbol, owner);
-    return this.methodLine(m, indent, symbol, staticMark, name);
+  private memberLine(member: MemberInfo, indent: string, ownerName: string): string {
+    let name = member.name;
+    if (member.typeParameters?.length) name += `~${member.typeParameters.join(', ')}~`;
+    const symbol = visibilitySymbol(member.visibility);
+    const staticMark = member.isStatic ? '$' : '';
+    if (member.kind === 'property')
+      return this.propertyLine(member, indent, symbol, staticMark, name);
+    if (member.kind === 'constructor')
+      return this.ctorLine(member, indent, symbol, ownerName);
+    return this.methodLine(member, indent, symbol, staticMark, name);
   }
 
   private propertyLine(
-    m: MemberInfo,
+    member: MemberInfo,
     indent: string,
     symbol: string,
     staticMark: string,
     name: string
   ): string {
-    const abstractMark = m.isAbstract ? '*' : '';
-    const type = m.type ? `: ${m.type}` : '';
+    const abstractMark = member.isAbstract ? '*' : '';
+    const type = member.type ? `: ${member.type}` : '';
     return `${indent}  ${symbol}${name}${staticMark}${abstractMark}${type}`;
   }
 
-  private ctorLine(m: MemberInfo, indent: string, symbol: string, owner: string): string {
-    const params = this.paramList(m.parameters);
-    const abstractMark = m.isAbstract ? '*' : '';
-    return `${indent}  ${symbol}${owner}(${params})${abstractMark}`;
+  private ctorLine(
+    member: MemberInfo,
+    indent: string,
+    symbol: string,
+    ownerName: string
+  ): string {
+    const params = this.paramList(member.parameters);
+    const abstractMark = member.isAbstract ? '*' : '';
+    return `${indent}  ${symbol}${ownerName}(${params})${abstractMark}`;
   }
 
   private methodLine(
-    m: MemberInfo,
+    member: MemberInfo,
     indent: string,
     symbol: string,
     staticMark: string,
     name: string
   ): string {
-    const prefix = m.kind === 'getter' ? 'get ' : m.kind === 'setter' ? 'set ' : '';
-    const params = this.paramList(m.parameters);
-    const returnType = m.returnType ? `: ${m.returnType}` : '';
-    const abstractMark = m.isAbstract ? '*' : '';
+    const prefix =
+      member.kind === 'getter' ? 'get ' : member.kind === 'setter' ? 'set ' : '';
+    const params = this.paramList(member.parameters);
+    const returnType = member.returnType ? `: ${member.returnType}` : '';
+    const abstractMark = member.isAbstract ? '*' : '';
     return `${indent}  ${symbol}${prefix}${name}${staticMark}(${params})${abstractMark}${returnType}`;
   }
 
-  private paramList(params?: ParameterInfo[]): string {
-    return (params ?? []).map(p => `${p.name}: ${p.type}`).join(', ');
+  private paramList(parameters?: ParameterInfo[]): string {
+    return (parameters ?? [])
+      .map(parameter => `${parameter.name}: ${parameter.type}`)
+      .join(', ');
   }
 
-  private emitRelations(lines: string[], e: EntityInfo): void {
-    e.relations.forEach(r => lines.push(this.relationLine(e.name, r)));
+  private emitRelations(lines: string[], entity: EntityInfo): void {
+    entity.relations.forEach(relation =>
+      lines.push(this.relationLine(entity.name, relation))
+    );
   }
 
-  private relationLine(from: string, rel: RelationInfo): string {
-    const left = this.cardinality(rel.sourceCardinality);
-    const right = this.cardinality(rel.targetCardinality);
-    const label = rel.label ? ` : ${rel.label}` : '';
+  private relationLine(sourceName: string, relation: RelationInfo): string {
+    const sourceCard = this.cardinality(relation.sourceCardinality);
+    const targetCard = this.cardinality(relation.targetCardinality);
+    const label = relation.label ? ` : ${relation.label}` : '';
     const map: Record<RelationInfo['type'], string> = {
       inheritance: '<|--',
       implementation: '<|..',
@@ -126,10 +140,10 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
       aggregation: 'o--',
       dependency: '..>',
     };
-    if (rel.type === 'inheritance' || rel.type === 'implementation') {
-      return `  ${rel.target} ${map[rel.type]} ${from}`;
+    if (relation.type === 'inheritance' || relation.type === 'implementation') {
+      return `  ${relation.target} ${map[relation.type]} ${sourceName}`;
     }
-    return `  ${from}${left} ${map[rel.type]}${right} ${rel.target}${label}`;
+    return `  ${sourceName}${sourceCard} ${map[relation.type]}${targetCard} ${relation.target}${label}`;
   }
 
   private cardinality(value?: string): string {
