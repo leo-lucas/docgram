@@ -20,6 +20,7 @@ function visibilitySymbol(v: MemberInfo['visibility']): string {
 export class MermaidDiagramGenerator implements DiagramGenerator {
   generate(entities: EntityInfo[]): string {
     const lines: string[] = ['classDiagram'];
+    this.prioritizeRelations(entities);
     const namespaceGroups = this.groupByNamespace(entities);
     for (const [namespace, entityList] of namespaceGroups) {
       this.emitNamespace(lines, namespace, entityList);
@@ -148,6 +149,30 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
 
   private cardinality(value?: string): string {
     return value ? ` "${value}"` : '';
+  }
+
+  private prioritizeRelations(entities: EntityInfo[]): void {
+    const entityNames = new Set(entities.map(entity => entity.name));
+    const priority: Record<RelationInfo['type'], number> = {
+      inheritance: 1,
+      implementation: 2,
+      composition: 3,
+      aggregation: 4,
+      association: 5,
+      dependency: 6,
+    };
+
+    for (const entity of entities) {
+      const best = new Map<string, RelationInfo>();
+      for (const relation of entity.relations) {
+        if (!entityNames.has(relation.target)) continue;
+        const current = best.get(relation.target);
+        if (!current || priority[relation.type] < priority[current.type]) {
+          best.set(relation.target, relation);
+        }
+      }
+      entity.relations = Array.from(best.values());
+    }
   }
 }
 

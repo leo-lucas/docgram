@@ -74,6 +74,17 @@ test('diagram falls back to object for untyped destructured methods', async () =
   expect(diagram.includes('+update(foo:')).toBe(false);
 });
 
+test('diagram prioritizes stronger relations between entities', async () => {
+  expect.hasAssertions();
+  const service = new DiagramService(new TypeScriptParser(), new MermaidDiagramGenerator());
+  const diagram = await service.generateFromPaths(['fixtures/relations.ts']);
+  expect(diagram).toContain('A "1" *-- "1" B : b');
+  const relLines = diagram
+    .split('\n')
+    .filter(l => l.trim().startsWith('A') && l.includes('B') && l.includes('--'));
+  expect(relLines).toHaveLength(1);
+});
+
 test('docs command writes README with diagram', () => {
   expect.hasAssertions();
   const dir = path.join('fixtures');
