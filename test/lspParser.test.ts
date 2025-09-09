@@ -49,7 +49,7 @@ test('LSP parser collects files from directories', async () => {
   expect.hasAssertions();
   const parser = new LspParser(new FakeClient());
   const entities = await parser.parse(['fixtures']);
-  expect(entities).toHaveLength(4);
+  expect(entities).toHaveLength(5);
   expect(entities[0].name).toBe('Foo');
   expect(entities.every(e => e.namespace === 'fixtures')).toBe(true);
 });
