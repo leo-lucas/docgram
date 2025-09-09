@@ -164,8 +164,8 @@ export class MermaidDiagramGenerator implements DiagramGenerator {
 
     for (const entity of entities) {
       const best = new Map<string, RelationInfo>();
-      for (const relation of entity.relations) {
-        if (!entityNames.has(relation.target)) continue;
+      const filtered = entity.relations.filter(r => entityNames.has(r.target));
+      for (const relation of filtered) {
         const current = best.get(relation.target);
         if (!current || priority[relation.type] < priority[current.type]) {
           best.set(relation.target, relation);
