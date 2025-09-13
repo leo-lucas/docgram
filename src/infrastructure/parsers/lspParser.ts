@@ -11,11 +11,11 @@ import { DocumentSymbol, SymbolKind } from 'vscode-languageserver-protocol';
 import { collectFiles, namespaceOf } from './utils.js';
 
 export class LspParser implements Parser {
-  constructor(private client: LanguageClient) {}
+  constructor(private client: LanguageClient, private extension = '.ts') {}
 
   async parse(paths: string[]): Promise<EntityInfo[]> {
     await this.client.initialize(process.cwd());
-    const files = await collectFiles(paths);
+    const files = await collectFiles(paths, this.extension);
     const entities: EntityInfo[] = [];
     for (const file of files) {
       const parsed = await this.parseFile(file);
@@ -365,15 +365,20 @@ export class LspParser implements Parser {
   }
 
   private parseReturn(line: string): string | undefined {
-    const matchResult = line.match(/\)\s*:\s*([^{;]+)/);
+    let matchResult = line.match(/\)\s*:\s*([^{;]+)/);
+    if (matchResult) return matchResult[1].trim();
+    matchResult = line.match(/\b(?:public|protected|private)\s+(?:static\s+)?([^\s]+)\s+[A-Za-z0-9_]+\s*\(/);
     return matchResult ? matchResult[1].trim() : undefined;
   }
 
   private parsePropertyType(line: string): string | undefined {
-    const matchResult = line.match(/:\s*([^;=]+)/);
-    if (!matchResult) return undefined;
-    const type = matchResult[1].trim();
-    return type === '{' ? 'object' : type;
+    let matchResult = line.match(/:\s*([^;=]+)/);
+    if (matchResult) {
+      const type = matchResult[1].trim();
+      return type === '{' ? 'object' : type;
+    }
+    matchResult = line.match(/\b(?:public|protected|private)\s+(?:static\s+)?(?:readonly\s+)?([^\s]+)\s+[A-Za-z0-9_]+/);
+    return matchResult ? matchResult[1].trim() : undefined;
   }
 
   private parseGenerics(header: string): string[] {
