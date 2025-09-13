@@ -361,7 +361,9 @@ export class LspParser implements Parser {
     }
     const paramMatch = part.match(/([A-Za-z0-9_]+)\s*:\s*([^,]+)/);
     if (paramMatch) return { name: paramMatch[1], type: paramMatch[2].trim() };
-    return { name: part, type: 'any' };
+    const csMatch = part.match(/([^\s]+)\s+([A-Za-z0-9_]+)(?:\s*=\s*[^,]+)?/);
+    if (csMatch) return { name: csMatch[2], type: csMatch[1] };
+    return { name: part.trim(), type: 'any' };
   }
 
   private parseReturn(line: string): string | undefined {

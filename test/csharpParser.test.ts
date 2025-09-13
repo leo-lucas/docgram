@@ -10,7 +10,7 @@ class FakeClient implements LanguageClient {
       {
         name: 'Foo',
         kind: SymbolKind.Class,
-        range: { start: { line: 0, character: 0 }, end: { line: 4, character: 0 } },
+        range: { start: { line: 0, character: 0 }, end: { line: 5, character: 0 } },
         selectionRange: { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } },
         children: [
           {
@@ -20,10 +20,16 @@ class FakeClient implements LanguageClient {
             selectionRange: { start: { line: 2, character: 0 }, end: { line: 2, character: 0 } },
           },
           {
-            name: 'Baz',
-            kind: SymbolKind.Method,
+            name: 'Name',
+            kind: SymbolKind.Property,
             range: { start: { line: 3, character: 0 }, end: { line: 3, character: 0 } },
             selectionRange: { start: { line: 3, character: 0 }, end: { line: 3, character: 0 } },
+          },
+          {
+            name: 'Add',
+            kind: SymbolKind.Method,
+            range: { start: { line: 4, character: 0 }, end: { line: 4, character: 0 } },
+            selectionRange: { start: { line: 4, character: 0 }, end: { line: 4, character: 0 } },
           },
         ],
       },
@@ -39,9 +45,16 @@ test('C# parser builds entities from document symbols', async () => {
   expect(entities).toHaveLength(1);
   const foo = entities[0];
   expect(foo.name).toBe('Foo');
-  expect(foo.members).toHaveLength(2);
+  expect(foo.members).toHaveLength(3);
   expect(foo.members.some(m => m.name === 'Bar' && m.type === 'int')).toBe(true);
-  expect(foo.members.some(m => m.name === 'Baz' && m.returnType === 'void')).toBe(true);
+  expect(foo.members.some(m => m.name === 'Name' && m.type === 'string')).toBe(true);
+  const add = foo.members.find(m => m.name === 'Add');
+  expect(add).toBeDefined();
+  expect(add?.returnType).toBe('int');
+  expect(add?.parameters).toEqual([
+    { name: 'x', type: 'int' },
+    { name: 'y', type: 'int' },
+  ]);
   expect(foo.namespace).toBe('fixtures');
 });
 
