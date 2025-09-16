@@ -12,7 +12,7 @@ program.name('docgram').description('Generate diagrams from source code');
 program
   .command('diagram')
   .argument('<path...>', 'File or directory to parse')
-  .option('--parser <parser>', 'Parser implementation to use (ts|lsp)', 'ts')
+  .option('--parser <parser>', 'Parser implementation to use (ts|lsp|csharp)', 'ts')
   .action(async (paths: string[], opts) => {
     try {
       const service = buildService(opts.parser);
@@ -26,7 +26,7 @@ program
 program
   .command('docs')
   .argument('<path...>', 'File or directory to parse')
-  .option('--parser <parser>', 'Parser implementation to use (ts|lsp)', 'ts')
+  .option('--parser <parser>', 'Parser implementation to use (ts|lsp|csharp)', 'ts')
   .action(async (paths: string[], opts) => {
     try {
       const service = buildService(opts.parser);
