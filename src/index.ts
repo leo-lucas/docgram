@@ -3,6 +3,7 @@ import { TypeScriptParser } from './infrastructure/parsers/typescriptParser.js';
 import { MermaidDiagramGenerator } from './infrastructure/diagram/mermaidGenerator.js';
 import { LspParser } from './infrastructure/parsers/lspParser.js';
 import { StdioLanguageClient } from './infrastructure/lsp/stdioClient.js';
+import { CSharpParser } from './infrastructure/parsers/csharpParser.js';
 
 export function buildService(parserOption: string) {
   const generator = new MermaidDiagramGenerator();
@@ -10,6 +11,8 @@ export function buildService(parserOption: string) {
   if (parserOption === 'lsp') {
     const client = new StdioLanguageClient('typescript-language-server', ['--stdio']);
     parser = new LspParser(client);
+  } else if (parserOption === 'csharp') {
+    parser = new CSharpParser();
   } else {
     parser = new TypeScriptParser();
   }
@@ -22,5 +25,6 @@ export {
   MermaidDiagramGenerator,
   LspParser,
   StdioLanguageClient,
+  CSharpParser,
 };
 

@@ -1,0 +1,47 @@
+classDiagram
+  namespace fixtures {
+    class Person {
+      <<abstract>>
+      +id*: number
+      #age: number
+      -_name: string
+      +address: Address
+      +Person(name: string, age: number, address: Address)
+      +calculateSalary(multiplier: number): number
+      +greet()*: void
+      +get name(): string
+      +set name(n: string)
+    }
+    class Employee {
+      +role: Role
+      +greet(): void
+      +assignTo(dept: Department): void
+    }
+    class Department {
+      +employees: Employee[]
+    }
+    class Repository~T~ {
+      +count$: number
+      +items: T[]
+      +reset$(): void
+      +add(item: T): void
+    }
+    class Greeter {
+      <<interface>>
+      +greet()*: void
+    }
+    class Role {
+      <<enumeration>>
+      +Admin
+      +User
+    }
+    class Address {
+      +street: string
+    }
+  }
+  Person "1" *-- "1" Address : address
+  Greeter <|.. Person
+  Employee "1" *-- "1" Role : role
+  Employee "1" ..> "1" Department : dept
+  Person <|-- Employee
+  Department "1" o-- "0..*" Employee : employees
