@@ -1,0 +1,11 @@
+classDiagram
+  namespace fixtures {
+    class Bar {
+    }
+    class Foo {
+      +Bar: Bar
+      +Name: string
+      +Add(x: int, y: int): int
+    }
+  }
+  Foo "1" *-- "1" Bar : Bar

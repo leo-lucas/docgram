@@ -1,0 +1,14 @@
+classDiagram
+  namespace fixtures {
+    class Config {
+      +foo: string
+      +bar: number
+      +Config(options: Options)
+      +update(options: Options): void
+    }
+    class Options {
+      +foo: string
+      +bar: number
+    }
+  }
+  Config "1" ..> "1" Options : options

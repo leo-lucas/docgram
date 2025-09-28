@@ -12,7 +12,9 @@
     "build": "tsc",
     "diagram": "npm run build && node dist/cli.js diagram",
     "docs": "npm run build && node dist/cli.js docs",
-    "test": "jest",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "jest --testPathIgnorePatterns=fixtures\\.e2e\\.test\\.ts",
+    "test:e2e": "jest --coverage=false test/fixtures.e2e.test.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier -w .",
     "prepublishOnly": "npm run build"

@@ -8,7 +8,11 @@ export class StdioLanguageClient implements LanguageClient {
   private proc?: ChildProcess;
   private connection?: MessageConnection;
 
-  constructor(private command: string, private args: string[] = []) {}
+  constructor(
+    private command: string,
+    private args: string[] = [],
+    private languageId = 'typescript'
+  ) {}
 
   async initialize(rootUri: string): Promise<void> {
     this.proc = spawn(this.command, this.args, { stdio: 'pipe' });
@@ -36,7 +40,7 @@ export class StdioLanguageClient implements LanguageClient {
     const uri = pathToFileURL(filePath).toString();
     const textDoc: TextDocumentItem = {
       uri,
-      languageId: 'typescript',
+      languageId: this.languageId,
       version: 1,
       text: content,
     };
