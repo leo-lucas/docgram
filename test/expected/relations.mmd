@@ -1,0 +1,11 @@
+classDiagram
+  namespace fixtures {
+    class B {
+    }
+    class A {
+      +b: B
+      +A(b: B)
+      +use(b: B): B
+    }
+  }
+  A "1" *-- "1" B : b

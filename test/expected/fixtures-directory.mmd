@@ -1,0 +1,77 @@
+classDiagram
+  namespace fixtures {
+    class Config {
+      +foo: string
+      +bar: number
+      +Config(options: Options)
+      +update(options: Options): void
+    }
+    class Options {
+      +foo: string
+      +bar: number
+    }
+    class ConfigUntyped {
+      +foo: string
+      +bar: number
+      +ConfigUntyped(options: object)
+      +update(options: object): void
+    }
+    class B {
+    }
+    class A {
+      +b: B
+      +A(b: B)
+      +use(b: B): B
+    }
+    class Person {
+      <<abstract>>
+      +id*: number
+      #age: number
+      -_name: string
+      +address: Address
+      +Person(name: string, age: number, address: Address)
+      +calculateSalary(multiplier: number): number
+      +greet()*: void
+      +get name(): string
+      +set name(n: string)
+    }
+    class Employee {
+      +role: Role
+      +greet(): void
+      +assignTo(dept: Department): void
+    }
+    class Department {
+      +employees: Employee[]
+    }
+    class Repository~T~ {
+      +count$: number
+      +items: T[]
+      +reset$(): void
+      +add(item: T): void
+    }
+    class Greeter {
+      <<interface>>
+      +greet()*: void
+    }
+    class Role {
+      <<enumeration>>
+      +Admin
+      +User
+    }
+    class Address {
+      +street: string
+    }
+    class Worker {
+      <<interface>>
+      +test*: object
+    }
+  }
+  Config "1" ..> "1" Options : options
+  A "1" *-- "1" B : b
+  Person "1" *-- "1" Address : address
+  Greeter <|.. Person
+  Employee "1" *-- "1" Role : role
+  Employee "1" ..> "1" Department : dept
+  Person <|-- Employee
+  Department "1" o-- "0..*" Employee : employees
+  Greeter <|-- Worker
